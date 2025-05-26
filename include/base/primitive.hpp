@@ -162,8 +162,7 @@ public:
         gl::vec2(1 - (phi + M_PI) / (2 * M_PI), (theta + M_PI / 2) / M_PI);
     // remap the uv coords, so that (0,0,1) is (0,0.5)
     hit_record.texCoords.u() = fmodf(hit_record.texCoords.u() + 0.75f, 1.0f);
-    hit_record.material =
-        this->material == nullptr ? gl::DefaultMaterial : this->material;
+    hit_record.material = this->material;
     hit_record.medium_interface = this->medium_interface;
 
     return true;

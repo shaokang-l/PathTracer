@@ -59,3 +59,30 @@ SceneInfo single_scatter_medium()
     scene.bg_color = vec3(0.f);
     return scene;
 }
+
+SceneInfo multiple_scatter_medium()
+{
+    using namespace std;
+    using namespace gl;
+
+    SceneInfo scene;
+    auto medium1 = std::make_shared<HomogeneousMedium>(gl::vec3(0.05f, 0.05f, 0.05f), gl::vec3(0.25f, 0.25f, 0.25f), 1.0f, gl::vec3(0.0f, 0.0f, 0.0f), 1.0f, 0.0f);
+    auto medium2 = std::make_shared<HomogeneousMedium>(gl::vec3(3.f, 3.f, 3.f), gl::vec3(0.5f, 0.5f, 0.5f), 1.0f, gl::vec3(0.0f, 0.0f, 0.0f), 1.0f, 0.0f);
+    auto sphere_material = std::make_shared<DiffuseEmitter>(gl::vec3(0.4, 2.32, 3.2), 1.0f);
+
+    auto mi_1_ptr = std::make_shared<MediumInterface>(medium2, medium1);
+    auto my_sphere = std::make_shared<Sphere>(gl::vec3(-0.5, -0.5, 0), 0.75f, nullptr, mi_1_ptr);
+    scene.objects.addObject(my_sphere);
+
+    auto mi_2_ptr = std::make_shared<MediumInterface>(nullptr, medium1);
+    auto my_sphere2 = std::make_shared<Sphere>(gl::vec3(1, 1, 2), 2.0f, sphere_material, mi_2_ptr);
+    scene.objects.addObject(my_sphere2);
+
+    scene.global_medium = medium1;
+    scene.camera = make_shared<PerspectiveCamera>(
+        gl::to_radian(45.f), (float)(scene._width) / (float)(scene._height), 10.f,
+        1000.f, vec3(0, 1, 0), vec3(0, 0, 1).normalize(),
+        vec3(0, 0, -4));
+    scene.bg_color = vec3(0.f);
+    return scene;
+}
