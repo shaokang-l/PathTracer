@@ -113,9 +113,7 @@ inline gl::vec3 getRayColor(Ray &ray, const ObjectList &prims,
             // handle medium transition
             if (mi)
             {
-                bool is_entering = dot(surface_rec.normal, ray.direction) < 0;
-                ray.current_medium = is_entering ? mi->inside : mi->outside;
-
+                ray.current_medium = surface_rec.is_inside ? mi->outside : mi->inside;
                 if (surface_rec.material && surface_rec.material->is_emitter())
                     break;
             }
