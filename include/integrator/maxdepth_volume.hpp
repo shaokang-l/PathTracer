@@ -7,6 +7,18 @@
 #include "PDF/mixedPDF.hpp"
 #include "sampler/sampler.hpp"
 
+inline gl::vec3 nee_estimate(const gl::vec3 &p_scatter,
+                             const gl::vec3 &wo_world,
+                             const std::shared_ptr<Medium> &medium,
+                             const Hittable &prims,
+                             const LightList &lights,
+                             std::shared_ptr<BVHNode> bvh)
+{
+    using namespace gl;
+    if (!medium)
+        return gl::vec3(0.0f);
+}
+
 inline gl::vec3 getRayColor(Ray &ray, const ObjectList &prims,
                             gl::vec3 bg_color, const LightList &lights,
                             uint max_depth = 40,
@@ -39,31 +51,28 @@ inline gl::vec3 getRayColor(Ray &ray, const ObjectList &prims,
 
         float t_medium_interaction = FLT_MAX;
         bool sampled_medium_event = false;
+
+        float trans_pdf = 1.f;
+        vec3 transmittance = 1.f;
         if (ray.current_medium)
         {
             MediumProperties medium_properties = ray.current_medium->sample_properties_at(ray.origin);
             float curr_sigma_t = maxComponent(medium_properties.sigma_t());
 
-            if (curr_sigma_t > epsilon)
-            {
-                t_medium_interaction = -log(1 - rand_num()) / curr_sigma_t;
-            }
+            t_medium_interaction = -log(1 - rand_num()) / curr_sigma_t;
 
             // medium event occurs before surface interaction
             if (t_medium_interaction < t_surface)
             {
                 sampled_medium_event = true;
+                trans_pdf = exp(-curr_sigma_t * t_medium_interaction) * curr_sigma_t;
+                transmittance = exp(-curr_sigma_t * t_medium_interaction);
             }
         }
 
         float t_event = sampled_medium_event ? t_medium_interaction : t_surface;
-
-        if (ray.current_medium && t_event > 0.f && t_event < FLT_MAX)
-        {
-            MediumProperties medium_properties = ray.current_medium->sample_properties_at(ray.origin);
-            float curr_sigma_t = maxComponent(medium_properties.sigma_t());
-            throughput *= exp(-curr_sigma_t * t_event);
-        }
+        throughput *= transmittance / trans_pdf;
+        ray.origin = ray.at(t_event);
 
         if (throughput.length() < epsilon)
             break;
@@ -71,66 +80,49 @@ inline gl::vec3 getRayColor(Ray &ray, const ObjectList &prims,
         // process event
         if (sampled_medium_event)
         {
-            // medium interaction branch
-            ray.origin = ray.at(t_event);
             MediumProperties medium_properties = ray.current_medium->sample_properties_at(ray.origin);
             vec3 sigma_s = medium_properties.sigma_s;
             vec3 sigma_t = medium_properties.sigma_t();
             vec3 sigma_a = medium_properties.sigma_a;
-            vec3 albedo = sigma_s / sigma_t;
 
-            float prob_scatter = maxComponent(albedo);
-
-            if (rand_num() < prob_scatter)
-            {
-                // scatter
-                // weight
-                throughput *= albedo / prob_scatter;
-
-                const auto &phase_function = medium_properties.phase_function;
-                if (!phase_function)
-                    throughput = vec3(0.f);
-
-                PhaseRecord phase_rec;
-                vec2 u = vec2(rand_num(), rand_num());
-                const auto &wo_world = -ray.direction.normalize();
-                bool phase_sampled = phase_function->sample_p(wo_world, phase_rec, u);
-
-                if (!phase_sampled)
-                    throughput = vec3(0.f);
-
-                throughput *= phase_rec.p / phase_rec.pdf;
-                ray.direction = phase_rec.wi.normalize();
-            }
-            else
-            {
-                // absorption
-                accum_color += throughput * medium_properties.Le;
+            const auto &phase_function = medium_properties.phase_function;
+            if (!phase_function)
                 throughput = vec3(0.f);
-                break;
-            }
+
+            PhaseRecord phase_rec;
+            vec2 u = vec2(rand_num(), rand_num());
+            const auto &wo_world = -ray.direction.normalize();
+            bool phase_sampled = phase_function->sample_p(wo_world, phase_rec, u);
+
+            if (!phase_sampled)
+                throughput = vec3(0.f);
+
+            throughput *= phase_rec.p / phase_rec.pdf * sigma_s;
+            ray.direction = phase_rec.wi.normalize();
         }
         else
         {
             // hit surface branch
             // no hit
             if (!intersected_surface)
+            {
                 accum_color += throughput * bg_color;
+                break;
+            }
             else
             {
-                ray.origin = surface_rec.position;
-
-                if (surface_rec.material && surface_rec.material->is_emitter())
+                if (surface_rec.material)
                 {
                     accum_color += throughput * surface_rec.material->emit(ray, surface_rec);
+                    break;
                 }
 
                 const auto &mi = surface_rec.medium_interface;
                 // handle medium transition
-                if (mi)
+                if (mi && mi->is_transition())
                 {
-                    ray.current_medium = surface_rec.is_inside ? mi->inside : mi->outside;
-                    if (surface_rec.material && surface_rec.material->is_emitter())
+                    ray.current_medium = surface_rec.is_inside ? mi->outside : mi->inside;
+                    if (surface_rec.material)
                         break;
                 }
                 else
@@ -237,7 +229,7 @@ inline gl::vec3 getRayColor(Ray &ray, const ObjectList &prims,
 //         vec3 L_s1_estimate = estimate_l_scatter1(p, -ray.getDirection().normalize(), global_medium, prims, lights, bvh);
 //         vec3 albedo = medium_properties.sigma_s / medium_properties.sigma_t();
 
-//         return albedo * L_s1_estimate / sigma_t;
+//         return albedo * L_s1_estimate;
 //     }
 //     // Surface interaction occurs first (or at the same distance, or ray escapes to infinity if no hit)
 //     else
