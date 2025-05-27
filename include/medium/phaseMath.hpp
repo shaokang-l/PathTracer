@@ -24,9 +24,8 @@ namespace gl
         }
         else
         {
-            float cos_theta = -1.f / (2.f * g);
-            float term = (1.f + square(g) - square(1 - square(g))) / (1 + g - 2 * g * u[0]);
-            cos_theta *= term;
+            cos_theta = -1 / (2 * g) *
+                        (1 + square(g) - square((1 - square(g)) / (1 + g - 2 * g * u[0])));
         }
 
         float sin_theta = safeSqrt(1 - square(cos_theta));

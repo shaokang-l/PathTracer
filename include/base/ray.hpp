@@ -6,8 +6,8 @@ class Medium;
 class Ray
 {
 public:
-  Ray(const gl::vec3 &origin, const gl::vec3 &direction, float intensity = 1.0f)
-      : origin(origin), direction(direction), intensity(intensity) {};
+  Ray(const gl::vec3 &origin, const gl::vec3 &direction, float intensity = 1.0f, const std::shared_ptr<Medium> medium = nullptr)
+      : origin(origin), direction(direction), intensity(intensity), current_medium(medium) {};
   ~Ray() = default;
   Ray() = default;
 

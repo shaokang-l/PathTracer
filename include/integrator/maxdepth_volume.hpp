@@ -7,134 +7,225 @@
 #include "PDF/mixedPDF.hpp"
 #include "sampler/sampler.hpp"
 
+void update_medium_at_interface(Ray &ray, const HitRecord &hit_record)
+{
+    if (hit_record.medium_interface)
+    {
+        ray.current_medium = hit_record.is_inside ? hit_record.medium_interface->outside : hit_record.medium_interface->inside;
+    }
+    else
+    {
+        ray.current_medium = nullptr;
+    }
+};
+
 inline gl::vec3 nee_estimate(const gl::vec3 &p_scatter,
-                             const gl::vec3 &wo_world,
-                             const std::shared_ptr<Medium> &medium,
+                             const gl::vec3 &wo_world, const int max_bounces,
+                             const std::shared_ptr<Medium> &init_medium,
                              const Hittable &prims,
                              const LightList &lights,
                              std::shared_ptr<BVHNode> bvh)
 {
     using namespace gl;
-    if (!medium)
+
+    gl::vec3 L_nee_accum(0.0f);
+
+    int shadow_bounces = 0;
+    float T_light = 1.0f;
+    float p_trans_dir = 1.0f; // for MIS
+    if (lights.size() == 0 || LIGHT_SAMPLE_NUM == 0)
         return gl::vec3(0.0f);
+
+    auto light = lights.uniform_get(); // Uniformly pick one light from the list
+    if (!light)
+        return gl::vec3(0.0f);
+
+    auto p_prime = light->get_sample(rand_num(), rand_num());
+    auto n_prime = light->get_normal_at(p_prime);
+    auto p_prime_pdf = 1.0f / (light->get_area() * lights.size());
+
+    auto p = p_scatter;
+    auto shadow_ray = Ray(p_prime, (p_prime - p).normalize(), 1.0f, init_medium);
+
+    while (true)
+    {
+        shadow_ray.origin = p;
+        shadow_ray.direction = (p_prime - p).normalize();
+        HitRecord shadow_hit_record;
+        bool is_shadow_hit = false;
+        is_shadow_hit = bvh ? bvh->intersect(shadow_ray, shadow_hit_record, 0.001f, (p_prime - p).length() - 0.001f)
+                            : prims.intersect(shadow_ray, shadow_hit_record, 0.001f, (p_prime - p).length() - 0.001f);
+
+        float next_t = (p_prime - p).length();
+        if (is_shadow_hit)
+            next_t = shadow_hit_record.t;
+
+        if (shadow_ray.current_medium)
+        {
+            MediumProperties medium_props = shadow_ray.current_medium->sample_properties_at(shadow_ray.at(next_t));
+            float curr_sigma_t = maxComponent(medium_props.sigma_t());
+            T_light *= exp(-curr_sigma_t * next_t);
+            p_trans_dir *= exp(-curr_sigma_t * next_t);
+        }
+
+        // nothing blocking
+        if (!is_shadow_hit)
+            break;
+        else
+        {
+            // blocked by opaque surface (note that we consider dielectric surface as opaque)
+            if (shadow_hit_record.material)
+                return vec3(0.0f);
+
+            shadow_bounces++;
+            if (shadow_bounces >= max_bounces)
+                return vec3(0.0f);
+
+            update_medium_at_interface(shadow_ray, shadow_hit_record);
+            p = shadow_ray.at(next_t);
+        }
+    };
+
+    if (T_light > epsilon)
+    {
+        HitRecord light_surface_hit;
+        light_surface_hit.position = p_prime;
+        light_surface_hit.normal = n_prime;
+        // CRITICAL ASSUMPTION: uniform light color
+        light_surface_hit.texCoords = vec2(0.5f, 0.5f);
+        auto Le_prime = light->L_emit(light_surface_hit, (p_scatter - p_prime).normalize());
+        auto pdf_light = 1.f / (light->get_area() * lights.size());
+        auto cos_theta = absDot(n_prime, (p_scatter - p_prime).normalize());
+        auto phase_val = init_medium->sample_properties_at(p_scatter).phase_function->p(wo_world, (p_prime - p_scatter).normalize());
+        auto G = cos_theta / square((p_scatter - p_prime).length());
+        return (Le_prime * phase_val * T_light) / pdf_light;
+    }
+
+    return gl::vec3(0.0f);
 }
 
 inline gl::vec3 getRayColor(Ray &ray, const ObjectList &prims,
                             gl::vec3 bg_color, const LightList &lights,
                             uint max_depth = 40,
-                            std::shared_ptr<BVHNode> bvh = nullptr, const std::shared_ptr<Medium> &global_medium = nullptr)
-{
-    using namespace gl;
+                            std::shared_ptr<BVHNode> bvh = nullptr, const std::shared_ptr<Medium> &global_medium = nullptr) {
+};
 
-    if (!global_medium)
-        return vec3(0.f);
+// inline gl::vec3 getRayColor(Ray &ray, const ObjectList &prims,
+//                             gl::vec3 bg_color, const LightList &lights,
+//                             uint max_depth = 40,
+//                             std::shared_ptr<BVHNode> bvh = nullptr, const std::shared_ptr<Medium> &global_medium = nullptr)
+// {
+//     using namespace gl;
 
-    ray.current_medium = global_medium;
+//     if (!global_medium)
+//         return vec3(0.f);
 
-    vec3 accum_color(0.f);
-    vec3 throughput(1.f);
+//     ray.current_medium = global_medium;
 
-    for (int bounce = 0; bounce < max_depth; ++bounce)
-    {
-        HitRecord surface_rec;
-        bool intersected_surface = false;
-        float t_surface = FLT_MAX;
+//     vec3 accum_color(0.f);
+//     vec3 throughput(1.f);
 
-        // 1. Find distance to nearest surface along the current ray
-        if (bvh)
-            intersected_surface = bvh->intersect(ray, surface_rec, 0.001f, FLT_MAX);
-        else
-            intersected_surface = prims.intersect(ray, surface_rec, 0.001f, FLT_MAX);
+//     for (int bounce = 0; bounce < max_depth; ++bounce)
+//     {
+//         HitRecord surface_rec;
+//         bool intersected_surface = false;
+//         float t_surface = FLT_MAX;
 
-        if (intersected_surface)
-            t_surface = surface_rec.t;
+//         // 1. Find distance to nearest surface along the current ray
+//         if (bvh)
+//             intersected_surface = bvh->intersect(ray, surface_rec, 0.001f, FLT_MAX);
+//         else
+//             intersected_surface = prims.intersect(ray, surface_rec, 0.001f, FLT_MAX);
 
-        float t_medium_interaction = FLT_MAX;
-        bool sampled_medium_event = false;
+//         if (intersected_surface)
+//             t_surface = surface_rec.t;
 
-        float trans_pdf = 1.f;
-        vec3 transmittance = 1.f;
-        if (ray.current_medium)
-        {
-            MediumProperties medium_properties = ray.current_medium->sample_properties_at(ray.origin);
-            float curr_sigma_t = maxComponent(medium_properties.sigma_t());
+//         float t_medium_interaction = FLT_MAX;
+//         bool sampled_medium_event = false;
 
-            t_medium_interaction = -log(1 - rand_num()) / curr_sigma_t;
+//         float trans_pdf = 1.f;
+//         vec3 transmittance = 1.f;
+//         if (ray.current_medium)
+//         {
+//             MediumProperties medium_properties = ray.current_medium->sample_properties_at(ray.origin);
+//             float curr_sigma_t = maxComponent(medium_properties.sigma_t());
 
-            // medium event occurs before surface interaction
-            if (t_medium_interaction < t_surface)
-            {
-                sampled_medium_event = true;
-                trans_pdf = exp(-curr_sigma_t * t_medium_interaction) * curr_sigma_t;
-                transmittance = exp(-curr_sigma_t * t_medium_interaction);
-            }
-        }
+//             t_medium_interaction = -log(1 - rand_num()) / curr_sigma_t;
 
-        float t_event = sampled_medium_event ? t_medium_interaction : t_surface;
-        throughput *= transmittance / trans_pdf;
-        ray.origin = ray.at(t_event);
+//             // medium event occurs before surface interaction
+//             if (t_medium_interaction < t_surface)
+//             {
+//                 sampled_medium_event = true;
+//                 trans_pdf = exp(-curr_sigma_t * t_medium_interaction) * curr_sigma_t;
+//                 transmittance = exp(-curr_sigma_t * t_medium_interaction);
+//             }
+//         }
 
-        if (throughput.length() < epsilon)
-            break;
+//         float t_event = sampled_medium_event ? t_medium_interaction : t_surface;
+//         throughput *= transmittance / trans_pdf;
+//         ray.origin = ray.at(t_event);
 
-        // process event
-        if (sampled_medium_event)
-        {
-            MediumProperties medium_properties = ray.current_medium->sample_properties_at(ray.origin);
-            vec3 sigma_s = medium_properties.sigma_s;
-            vec3 sigma_t = medium_properties.sigma_t();
-            vec3 sigma_a = medium_properties.sigma_a;
+//         if (throughput.length() < epsilon)
+//             break;
 
-            const auto &phase_function = medium_properties.phase_function;
-            if (!phase_function)
-                throughput = vec3(0.f);
+//         // process event
+//         if (sampled_medium_event)
+//         {
+//             MediumProperties medium_properties = ray.current_medium->sample_properties_at(ray.origin);
+//             vec3 sigma_s = medium_properties.sigma_s;
+//             vec3 sigma_t = medium_properties.sigma_t();
+//             vec3 sigma_a = medium_properties.sigma_a;
 
-            PhaseRecord phase_rec;
-            vec2 u = vec2(rand_num(), rand_num());
-            const auto &wo_world = -ray.direction.normalize();
-            bool phase_sampled = phase_function->sample_p(wo_world, phase_rec, u);
+//             const auto &phase_function = medium_properties.phase_function;
+//             if (!phase_function)
+//                 throughput = vec3(0.f);
 
-            if (!phase_sampled)
-                throughput = vec3(0.f);
+//             PhaseRecord phase_rec;
+//             vec2 u = vec2(rand_num(), rand_num());
+//             const auto &wo_world = -ray.direction.normalize();
+//             bool phase_sampled = phase_function->sample_p(wo_world, phase_rec, u);
 
-            throughput *= phase_rec.p / phase_rec.pdf * sigma_s;
-            ray.direction = phase_rec.wi.normalize();
-        }
-        else
-        {
-            // hit surface branch
-            // no hit
-            if (!intersected_surface)
-            {
-                accum_color += throughput * bg_color;
-                break;
-            }
-            else
-            {
-                if (surface_rec.material)
-                {
-                    accum_color += throughput * surface_rec.material->emit(ray, surface_rec);
-                    break;
-                }
+//             if (!phase_sampled)
+//                 throughput = vec3(0.f);
 
-                const auto &mi = surface_rec.medium_interface;
-                // handle medium transition
-                if (mi && mi->is_transition())
-                {
-                    ray.current_medium = surface_rec.is_inside ? mi->outside : mi->inside;
-                    if (surface_rec.material)
-                        break;
-                }
-                else
-                {
-                    ray.current_medium = nullptr;
-                }
-            }
-        }
-    }
+//             throughput *= phase_rec.p / phase_rec.pdf * sigma_s;
+//             ray.direction = phase_rec.wi.normalize();
+//         }
+//         else
+//         {
+//             // hit surface branch
+//             // no hit
+//             if (!intersected_surface)
+//             {
+//                 accum_color += throughput * bg_color;
+//                 break;
+//             }
+//             else
+//             {
+//                 if (surface_rec.material)
+//                 {
+//                     accum_color += throughput * surface_rec.material->emit(ray, surface_rec);
+//                     break;
+//                 }
 
-    return accum_color;
-}
+//                 const auto &mi = surface_rec.medium_interface;
+//                 // handle medium transition
+//                 if (mi && mi->is_transition())
+//                 {
+//                     ray.current_medium = surface_rec.is_inside ? mi->outside : mi->inside;
+//                     if (surface_rec.material)
+//                         break;
+//                 }
+//                 else
+//                 {
+//                     ray.current_medium = nullptr;
+//                 }
+//             }
+//         }
+//     }
+
+//     return accum_color;
+// }
 
 // inline gl::vec3 estimate_l_scatter1(const gl::vec3 &p_scatter,
 //                                     const gl::vec3 &wo_world,
