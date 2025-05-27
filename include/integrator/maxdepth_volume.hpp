@@ -39,6 +39,8 @@ inline gl::vec3 getRayColor(Ray &ray, const ObjectList &prims,
 
         float t_medium_interaction = FLT_MAX;
         bool sampled_medium_event = false;
+        float trans_pdf = 1.f;
+        vec3 transmittance = 1.f;
         if (ray.current_medium)
         {
             MediumProperties medium_properties = ray.current_medium->sample_properties_at(ray.origin);
@@ -58,12 +60,15 @@ inline gl::vec3 getRayColor(Ray &ray, const ObjectList &prims,
 
         float t_event = sampled_medium_event ? t_medium_interaction : t_surface;
 
-        if (ray.current_medium && t_event > 0.f && t_event < FLT_MAX)
+        if (sampled_medium_event)
         {
             MediumProperties medium_properties = ray.current_medium->sample_properties_at(ray.origin);
             float curr_sigma_t = maxComponent(medium_properties.sigma_t());
-            throughput *= exp(-curr_sigma_t * t_event);
+            trans_pdf = exp(-curr_sigma_t * t_event) * curr_sigma_t;
+            transmittance = exp(-curr_sigma_t * t_event);
         }
+
+        throughput *= transmittance / trans_pdf;
 
         if (throughput.length() < epsilon)
             break;
@@ -79,66 +84,44 @@ inline gl::vec3 getRayColor(Ray &ray, const ObjectList &prims,
             vec3 sigma_a = medium_properties.sigma_a;
             vec3 albedo = sigma_s / sigma_t;
 
-            float prob_scatter = maxComponent(albedo);
-
-            if (rand_num() < prob_scatter)
-            {
-                // scatter
-                // weight
-                throughput *= albedo / prob_scatter;
-
-                const auto &phase_function = medium_properties.phase_function;
-                if (!phase_function)
-                    throughput = vec3(0.f);
-
-                PhaseRecord phase_rec;
-                vec2 u = vec2(rand_num(), rand_num());
-                const auto &wo_world = -ray.direction.normalize();
-                bool phase_sampled = phase_function->sample_p(wo_world, phase_rec, u);
-
-                if (!phase_sampled)
-                    throughput = vec3(0.f);
-
-                throughput *= phase_rec.p / phase_rec.pdf;
-                ray.direction = phase_rec.wi.normalize();
-            }
-            else
-            {
-                // absorption
-                accum_color += throughput * medium_properties.Le;
+            const auto &phase_function = medium_properties.phase_function;
+            if (!phase_function)
                 throughput = vec3(0.f);
-                break;
-            }
+
+            PhaseRecord phase_rec;
+            vec2 u = vec2(rand_num(), rand_num());
+            const auto &wo_world = -ray.direction.normalize();
+            bool phase_sampled = phase_function->sample_p(wo_world, phase_rec, u);
+
+            if (!phase_sampled)
+                throughput = vec3(0.f);
+
+            throughput *= phase_rec.p / phase_rec.pdf * sigma_s;
+            ray.direction = phase_rec.wi.normalize();
         }
         else
         {
-            // hit surface branch
-            // no hit
-            if (!intersected_surface)
-                accum_color += throughput * bg_color;
-            else
+            // not scatter
+            ray.origin = surface_rec.position;
+
+            if (surface_rec.material && surface_rec.material->is_emitter())
             {
-                ray.origin = surface_rec.position;
+                accum_color += throughput * surface_rec.material->emit(ray, surface_rec);
+            }
+
+            const auto &mi = surface_rec.medium_interface;
+            // handle medium transition
+            if (mi)
+            {
+                bool is_entering = dot(surface_rec.normal, ray.direction) < 0;
+                ray.current_medium = is_entering ? mi->inside : mi->outside;
 
                 if (surface_rec.material && surface_rec.material->is_emitter())
-                {
-                    accum_color += throughput * surface_rec.material->emit(ray, surface_rec);
-                }
-
-                const auto &mi = surface_rec.medium_interface;
-                // handle medium transition
-                if (mi)
-                {
-                    bool is_entering = dot(surface_rec.normal, ray.direction) < 0;
-                    ray.current_medium = is_entering ? mi->inside : mi->outside;
-
-                    if (surface_rec.material && surface_rec.material->is_emitter())
-                        break;
-                }
-                else
-                {
-                    ray.current_medium = nullptr;
-                }
+                    break;
+            }
+            else
+            {
+                ray.current_medium = nullptr;
             }
         }
     }

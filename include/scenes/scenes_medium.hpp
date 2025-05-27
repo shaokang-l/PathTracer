@@ -66,8 +66,8 @@ SceneInfo multiple_scatter_medium()
     using namespace gl;
 
     SceneInfo scene;
-    auto medium1 = std::make_shared<HomogeneousMedium>(gl::vec3(0.05f, 0.05f, 0.05f), gl::vec3(0.25f, 0.25f, 0.25f), 1.0f, gl::vec3(0.0f, 0.0f, 0.0f), 1.0f, 0.0f);
-    auto medium2 = std::make_shared<HomogeneousMedium>(gl::vec3(3.f, 3.f, 3.f), gl::vec3(0.5f, 0.5f, 0.5f), 1.0f, gl::vec3(0.0f, 0.0f, 0.0f), 1.0f, 0.0f);
+    auto medium1 = std::make_shared<HomogeneousMedium>(gl::vec3(0.05f), gl::vec3(0.25f), 1.0f, gl::vec3(0.0f), 1.0f, 0.0f);
+    auto medium2 = std::make_shared<HomogeneousMedium>(gl::vec3(3.f), gl::vec3(0.5f), 1.0f, gl::vec3(0.0f), 1.0f, 0.0f);
     auto sphere_material = std::make_shared<DiffuseEmitter>(gl::vec3(0.4, 2.32, 3.2), 1.0f);
 
     auto mi_1_ptr = std::make_shared<MediumInterface>(medium2, medium1);
