@@ -30,8 +30,8 @@ int main()
   // SceneInfo scene = hdri_sunset_check();
 
   // SceneInfo scene = absorption_only_medium();
-  SceneInfo scene = single_scatter_medium();
-  // SceneInfo scene = multiple_scatter_medium();
+  // SceneInfo scene = single_scatter_medium();
+  SceneInfo scene = multiple_scatter_medium();
 
   //   SceneInfo scene;
   // #ifdef HAS_FBX_SDK
