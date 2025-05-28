@@ -1,11 +1,5 @@
 #pragma once
-#include "base/lightList.hpp"
-#include "base/objectList.hpp"
-#include "config.hpp"
-#include "primitives/bvh.hpp"
-#include "PDF/hittablePDF.hpp"
-#include "PDF/mixedPDF.hpp"
-#include "sampler/sampler.hpp"
+#include "integrator/volume_helper.hpp"
 
 void update_medium_at_interface(Ray &ray, const HitRecord &hit_record)
 {
@@ -107,7 +101,123 @@ inline gl::vec3 nee_estimate(const gl::vec3 &p_scatter,
 inline gl::vec3 getRayColor(Ray &ray, const ObjectList &prims,
                             gl::vec3 bg_color, const LightList &lights,
                             uint max_depth = 40,
-                            std::shared_ptr<BVHNode> bvh = nullptr, const std::shared_ptr<Medium> &global_medium = nullptr) {
+                            std::shared_ptr<BVHNode> bvh = nullptr, const std::shared_ptr<Medium> &global_medium = nullptr)
+{
+    using namespace gl;
+
+    // don't use this integrator if you don't have a global medium
+    if (!global_medium)
+    {
+        std::cout << "No global medium" << std::endl;
+        return vec3(0.f);
+    }
+
+    ray.current_medium = global_medium;
+    vec3 accum_L(0.f);
+    float throughput = 1.f;
+    int bounce = 0;
+
+    while (true)
+    {
+        HitRecord hit_record;
+        bool is_hit = false;
+        if (bvh == nullptr)
+            is_hit = prims.intersect(ray, hit_record);
+        else
+            is_hit = bvh->intersect(ray, hit_record);
+
+        bool scattered = false, terminated = false;
+        // start medium scattering sampling
+        if (ray.current_medium)
+        {
+            float t_max = is_hit ? hit_record.t : FLT_MAX;
+            float u = rand_num();
+            float u_mode = rand_num();
+
+            sampleT_maj(ray, t_max, u, [&](vec3 p, MediumProperties mp, vec3 sigma_maj, vec3 T_maj) -> bool
+                        {
+                            float p_absorb = mp.sigma_a[0] / mp.sigma_t()[0];
+                            float p_scatter = mp.sigma_s[0] / mp.sigma_t()[0];
+                            float p_null = std::max(0.f, 1.f - p_absorb - p_scatter);
+
+                            int mode = sampleDiscrete({p_absorb, p_scatter, p_null}, u_mode, nullptr, nullptr);
+                            if (mode == 0)
+                            {
+                                accum_L += throughput * mp.Le;
+                                terminated = true;
+                                return false;
+                            }
+                            else if (mode == 1)
+                            {
+                                if(bounce++>=max_depth)
+                                {
+                                    terminated = true;
+                                    return false;
+                                }
+                                //sample phase function
+
+                                vec2 u_phase = vec2(rand_num(), rand_num());
+                                PhaseRecord phase_rec;
+                                bool is_sampled = mp.phase_function->sample_p(-ray.direction.normalize(), phase_rec, u_phase);
+                                if(!is_sampled)
+                                {
+                                    terminated = true;
+                                    return false;
+                                }
+                                //update the states
+
+                                throughput *= phase_rec.p / phase_rec.pdf;
+                                ray.origin = p;
+                                ray.direction = phase_rec.wi;
+                                scattered = true;
+                                return false;
+                            }
+                            else if (mode == 2)
+                            {
+                                u_mode = rand_num();
+                                return true;
+                            } 
+                            return false; });
+        }
+
+        if (terminated)
+            return accum_L;
+        if (scattered)
+            continue;
+
+        if (is_hit)
+        {
+            if (hit_record.material)
+            {
+                accum_L += throughput * hit_record.material->emit(ray, hit_record);
+                // surface interaction, todo for now
+                break;
+            }
+            else
+            {
+                // hit but no material, medium transition
+                const auto &mi = hit_record.medium_interface;
+                if (mi && mi->is_transition())
+                {
+                    ray.current_medium = hit_record.is_inside ? mi->outside : mi->inside;
+                }
+                else
+                {
+                    ray.current_medium = nullptr;
+                }
+
+                ray.origin = hit_record.position + ray.direction * epsilon;
+            }
+        }
+        else
+        {
+            // or adding HDRI here
+            accum_L += throughput * bg_color;
+            return accum_L;
+        }
+    }
+
+    return accum_L;
 };
 
 // inline gl::vec3 getRayColor(Ray &ray, const ObjectList &prims,

@@ -4,9 +4,9 @@
 
 #define LIGHT_SAMPLE_X 2
 #define LIGHT_SAMPLE_Y 2
-#define MAX_RAY_DEPTH 6
-#define SPP_X 8
-#define SPP_Y 8
+#define MAX_RAY_DEPTH 30
+#define SPP_X 40
+#define SPP_Y 40
 #define GAMMA 2.2
 #define WIDTH 500
 #define HEIGHT 500
