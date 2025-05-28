@@ -16,15 +16,18 @@ SceneInfo cornell_box()
     auto red = make_shared<Lambertian>(vec3(0.65, 0.05, 0.05));
     auto white = make_shared<Lambertian>(vec3(0.73f));
     auto green = make_shared<Lambertian>(vec3(0.12, 0.45, 0.15));
-    auto light = make_shared<DiffuseEmitter>(vec3(1.0f), 15);
-    std::array<gl::vec3, 4> vertices;
-    vertices[0] = {213, 554, 227};
-    vertices[1] = {343, 554, 227};
-    vertices[2] = {343, 554, 332};
-    vertices[3] = {213, 554, 332};
+    auto light = make_shared<DiffuseEmitter>(vec3(0.5, 0.4, 0), 25);
+    auto medium = make_shared<HomogeneousMedium>(vec3(0.0f), vec3(0.00025f), 1.0f, vec3(0.f), 1.0f, 0.0f);
+    scene.global_medium = medium;
+
+    // std::array<gl::vec3, 4> vertices;
+    // vertices[0] = {213, 554, 227};
+    // vertices[1] = {343, 554, 227};
+    // vertices[2] = {343, 554, 332};
+    // vertices[3] = {213, 554, 332};
 
     objects.addObject(make_shared<FlipFace>(
-        make_shared<AARectangle<Axis::Y>>(554, 213, 343, 227, 332, light)));
+        make_shared<AARectangle<Axis::Y>>(554, 100, 400, 100, 400, light)));
     objects.addObject(
         make_shared<AARectangle<Axis::X>>(555, 0, 555, 0, 555, green));
     objects.addObject(make_shared<AARectangle<Axis::X>>(0, 0, 555, 0, 555, red));
@@ -427,7 +430,10 @@ SceneInfo cornell_box_modified()
     auto red = make_shared<Lambertian>(vec3(0.65, 0.05, 0.05));
     auto white = make_shared<Lambertian>(vec3(0.73f));
     auto green = make_shared<Lambertian>(vec3(0.12, 0.45, 0.15));
-    auto light = make_shared<DiffuseEmitter>(vec3(1.0f), 15);
+    auto light = make_shared<DiffuseEmitter>(vec3(1.0f, 1.0f, 0.f), 15);
+
+    auto medium = make_shared<HomogeneousMedium>(vec3(0.01f), vec3(0.0f), 1.0f, vec3(0.f), 1.0f, 0.0f);
+    scene.global_medium = medium;
 
     objects.addObject(make_shared<FlipFace>(
         make_shared<AARectangle<Axis::Y>>(554, 213, 343, 227, 332, light)));
@@ -448,7 +454,7 @@ SceneInfo cornell_box_modified()
     objects.addObject(box_left);
 
     shared_ptr<Sphere> sphere =
-        make_shared<Sphere>(vec3(190, 90, 190), 90, ROUGH_GOLD_MAT);
+        make_shared<Sphere>(vec3(190, 90, 190), 90, LAMBERTIAN_GREEN);
     objects.addObject(sphere);
 
     std::array<gl::vec3, 4> vertices;
@@ -733,8 +739,14 @@ SceneInfo custom_mesh()
     SceneInfo scene;
     ObjectList objects;
 
+    // auto medium_1 = make_shared<HomogeneousMedium>(vec3(0.01f), vec3(0.01f), 1.0f, vec3(0.f), 1.0f, 0.0f);
+    // auto medium_2 = make_shared<HomogeneousMedium>(vec3(0.2f), vec3(0.5f), 1.0f, vec3(0.f), 1.0f, -0.2f);
+
+    auto medium_interface = make_shared<MediumInterface>(nullptr, nullptr);
+    scene.global_medium = nullptr;
+
     std::shared_ptr<Hittable> mesh =
-        loadOBJMesh("../../assets/bunny_high.obj", DisneyBSDF::DisneyMaterial_Shell9);
+        loadOBJMesh("../../assets/bunny_high.obj", DisneyBSDF::DisneyMaterial_Shell9, medium_interface);
     // mesh = make_shared<Rotate<Axis::X>>(mesh, M_PI_2);
     mesh = make_shared<Rotate<Axis::Y>>(mesh, M_PI_2);
     mesh = make_shared<Scale>(mesh, 2.8f);

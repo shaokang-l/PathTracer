@@ -27,6 +27,18 @@ struct ScatterRecord
     return (this->sampled_type & BxDFFlags::SpecularTransmission) ==
            BxDFFlags::SpecularTransmission;
   }
+
+  bool is_transmission() const
+  {
+    return (this->sampled_type & BxDFFlags::Transmission) ==
+           BxDFFlags::Transmission;
+  }
+
+  bool is_reflection() const
+  {
+    return (this->sampled_type & BxDFFlags::Reflection) ==
+           BxDFFlags::Reflection;
+  }
 };
 
 struct HitRecord

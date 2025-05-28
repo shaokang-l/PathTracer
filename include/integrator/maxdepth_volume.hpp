@@ -1,103 +1,5 @@
 #pragma once
 #include "integrator/volume_helper.hpp"
-
-void update_medium_at_interface(Ray &ray, const HitRecord &hit_record)
-{
-    if (hit_record.medium_interface)
-    {
-        ray.current_medium = hit_record.is_inside ? hit_record.medium_interface->outside : hit_record.medium_interface->inside;
-    }
-    else
-    {
-        ray.current_medium = nullptr;
-    }
-};
-
-inline gl::vec3 nee_estimate(const gl::vec3 &p_scatter,
-                             const gl::vec3 &wo_world, const int max_bounces,
-                             const std::shared_ptr<Medium> &init_medium,
-                             const Hittable &prims,
-                             const LightList &lights,
-                             std::shared_ptr<BVHNode> bvh)
-{
-    using namespace gl;
-
-    gl::vec3 L_nee_accum(0.0f);
-
-    int shadow_bounces = 0;
-    float T_light = 1.0f;
-    float p_trans_dir = 1.0f; // for MIS
-    if (lights.size() == 0 || LIGHT_SAMPLE_NUM == 0)
-        return gl::vec3(0.0f);
-
-    auto light = lights.uniform_get(); // Uniformly pick one light from the list
-    if (!light)
-        return gl::vec3(0.0f);
-
-    auto p_prime = light->get_sample(rand_num(), rand_num());
-    auto n_prime = light->get_normal_at(p_prime);
-    auto p_prime_pdf = 1.0f / (light->get_area() * lights.size());
-
-    auto p = p_scatter;
-    auto shadow_ray = Ray(p_prime, (p_prime - p).normalize(), 1.0f, init_medium);
-
-    while (true)
-    {
-        shadow_ray.origin = p;
-        shadow_ray.direction = (p_prime - p).normalize();
-        HitRecord shadow_hit_record;
-        bool is_shadow_hit = false;
-        is_shadow_hit = bvh ? bvh->intersect(shadow_ray, shadow_hit_record, 0.001f, (p_prime - p).length() - 0.001f)
-                            : prims.intersect(shadow_ray, shadow_hit_record, 0.001f, (p_prime - p).length() - 0.001f);
-
-        float next_t = (p_prime - p).length();
-        if (is_shadow_hit)
-            next_t = shadow_hit_record.t;
-
-        if (shadow_ray.current_medium)
-        {
-            MediumProperties medium_props = shadow_ray.current_medium->sample_properties_at(shadow_ray.at(next_t));
-            float curr_sigma_t = maxComponent(medium_props.sigma_t());
-            T_light *= exp(-curr_sigma_t * next_t);
-            p_trans_dir *= exp(-curr_sigma_t * next_t);
-        }
-
-        // nothing blocking
-        if (!is_shadow_hit)
-            break;
-        else
-        {
-            // blocked by opaque surface (note that we consider dielectric surface as opaque)
-            if (shadow_hit_record.material)
-                return vec3(0.0f);
-
-            shadow_bounces++;
-            if (shadow_bounces >= max_bounces)
-                return vec3(0.0f);
-
-            update_medium_at_interface(shadow_ray, shadow_hit_record);
-            p = shadow_ray.at(next_t);
-        }
-    };
-
-    if (T_light > epsilon)
-    {
-        HitRecord light_surface_hit;
-        light_surface_hit.position = p_prime;
-        light_surface_hit.normal = n_prime;
-        // CRITICAL ASSUMPTION: uniform light color
-        light_surface_hit.texCoords = vec2(0.5f, 0.5f);
-        auto Le_prime = light->L_emit(light_surface_hit, (p_scatter - p_prime).normalize());
-        auto pdf_light = 1.f / (light->get_area() * lights.size());
-        auto cos_theta = absDot(n_prime, (p_scatter - p_prime).normalize());
-        auto phase_val = init_medium->sample_properties_at(p_scatter).phase_function->p(wo_world, (p_prime - p_scatter).normalize());
-        auto G = cos_theta / square((p_scatter - p_prime).length());
-        return (Le_prime * phase_val * T_light) / pdf_light;
-    }
-
-    return gl::vec3(0.0f);
-}
-
 inline gl::vec3 getRayColor(Ray &ray, const ObjectList &prims,
                             gl::vec3 bg_color, const LightList &lights,
                             uint max_depth = 40,
@@ -105,20 +7,19 @@ inline gl::vec3 getRayColor(Ray &ray, const ObjectList &prims,
 {
     using namespace gl;
 
-    // don't use this integrator if you don't have a global medium
-    if (!global_medium)
-    {
-        std::cout << "No global medium" << std::endl;
-        return vec3(0.f);
-    }
-
     ray.current_medium = global_medium;
     vec3 accum_L(0.f);
-    float throughput = 1.f;
+    vec3 throughput(1.f);
     int bounce = 0;
 
     while (true)
     {
+        float uc = halton_sampler.get1D();
+        vec2 u = halton_sampler.get2D();
+        float u_mode = halton_sampler.get1D();
+        float u_maj = halton_sampler.get1D();
+        vec2 u_phase = halton_sampler.get2D();
+
         HitRecord hit_record;
         bool is_hit = false;
         if (bvh == nullptr)
@@ -131,10 +32,8 @@ inline gl::vec3 getRayColor(Ray &ray, const ObjectList &prims,
         if (ray.current_medium)
         {
             float t_max = is_hit ? hit_record.t : FLT_MAX;
-            float u = rand_num();
-            float u_mode = rand_num();
 
-            sampleT_maj(ray, t_max, u, [&](vec3 p, MediumProperties mp, vec3 sigma_maj, vec3 T_maj) -> bool
+            sampleT_maj(ray, t_max, u_maj, [&](vec3 p, MediumProperties mp, vec3 sigma_maj, vec3 T_maj) -> bool
                         {
                             float p_absorb = mp.sigma_a[0] / mp.sigma_t()[0];
                             float p_scatter = mp.sigma_s[0] / mp.sigma_t()[0];
@@ -156,7 +55,7 @@ inline gl::vec3 getRayColor(Ray &ray, const ObjectList &prims,
                                 }
                                 //sample phase function
 
-                                vec2 u_phase = vec2(rand_num(), rand_num());
+                                
                                 PhaseRecord phase_rec;
                                 bool is_sampled = mp.phase_function->sample_p(-ray.direction.normalize(), phase_rec, u_phase);
                                 if(!is_sampled)
@@ -190,8 +89,59 @@ inline gl::vec3 getRayColor(Ray &ray, const ObjectList &prims,
             if (hit_record.material)
             {
                 accum_L += throughput * hit_record.material->emit(ray, hit_record);
-                // surface interaction, todo for now
-                break;
+                // surface interaction branch
+
+                if (bounce++ >= max_depth)
+                    break;
+
+                ScatterRecord srec;
+                auto mat = hit_record.material;
+                if (mat->scatter(ray, hit_record, srec, uc, u, MODE))
+                {
+
+                    // delta handling
+                    if (srec.is_specular())
+                    {
+                        throughput *= srec.attenuation;
+                    }
+                    else
+                    {
+                        // non-delta surfaces
+                        if (srec.pdf_val > 0.f && srec.attenuation.length() > epsilon)
+                        {
+                            float abs_cos_theta = absDot(srec.sampled_ray.direction.normalize(), hit_record.normal);
+                            throughput *= srec.attenuation * abs_cos_theta / srec.pdf_val;
+                        }
+                        else
+                            break;
+                    }
+
+                    if (throughput.length() < epsilon)
+                        break;
+
+                    float sign = 1.0f;
+                    if (srec.is_transmission())
+                        sign = -1.0f;
+
+                    // update ray during surface interaction,avoid self-intersection
+                    ray.origin = hit_record.position + hit_record.normal * epsilon * sign;
+                    ray.direction = srec.sampled_ray.direction;
+
+                    // update medium for transmission
+                    if (srec.is_transmission())
+                    {
+                        const auto &mi = hit_record.medium_interface;
+                        if (mi && mi->is_transition())
+                        {
+                            ray.current_medium = hit_record.is_inside ? mi->outside : mi->inside;
+                        }
+                    }
+                }
+                else
+                {
+                    // material exist but nothing happens with sample_bsdf, pure absorption
+                    break;
+                }
             }
             else
             {
@@ -206,13 +156,25 @@ inline gl::vec3 getRayColor(Ray &ray, const ObjectList &prims,
                     ray.current_medium = nullptr;
                 }
 
-                ray.origin = hit_record.position + ray.direction * epsilon;
+                float sign = hit_record.is_inside ? 1.f : -1.f;
+                ray.origin = hit_record.position + hit_record.normal * sign * epsilon;
             }
         }
         else
         {
-            // or adding HDRI here
-            accum_L += throughput * bg_color;
+            auto env_light = lights.getEnvironmentLight();
+            if (env_light)
+            {
+                HitRecord env_hit_record;
+                env_hit_record.normal = -ray.getDirection().normalize();
+                vec3 env_color = env_light->L_emit(env_hit_record, ray.getDirection().normalize());
+                accum_L += throughput * env_color;
+            }
+            else
+            {
+                // if no HDRI, use bg_color
+                accum_L += throughput * bg_color;
+            }
             return accum_L;
         }
     }

@@ -14,7 +14,7 @@ int main()
 #endif
 
   // night_time();
-  // SceneInfo scene = cornell_box();
+  SceneInfo scene = cornell_box();
 
   // SceneInfo scene = cornell_box_disneyDiffuse();
   // SceneInfo scene = cornell_box_disneyMetal();
@@ -31,7 +31,7 @@ int main()
 
   // SceneInfo scene = absorption_only_medium();
   // SceneInfo scene = single_scatter_medium();
-  SceneInfo scene = multiple_scatter_medium();
+  // SceneInfo scene = multiple_scatter_medium();
 
   //   SceneInfo scene;
   // #ifdef HAS_FBX_SDK

@@ -33,6 +33,11 @@ public:
     return object ? object->get_underlying_shape() : nullptr; // Current safe version
   }
 
+  std::shared_ptr<MediumInterface> get_medium_interface() const override
+  {
+    return object ? object->get_medium_interface() : nullptr; // Current safe version
+  }
+
   AABB getAABB(float t0, float t1) override { return object->getAABB(t0, t1); };
   std::shared_ptr<Hittable> object;
 };
@@ -78,6 +83,11 @@ public:
     return object ? object->get_underlying_shape() : nullptr; // Current safe version
   }
 
+  std::shared_ptr<MediumInterface> get_medium_interface() const override
+  {
+    return object ? object->get_medium_interface() : nullptr; // Current safe version
+  }
+
   std::shared_ptr<Hittable> object;
   gl::vec3 offset;
 };
@@ -112,6 +122,11 @@ public:
   std::shared_ptr<Hittable> get_underlying_shape() override
   {
     return object ? object->get_underlying_shape() : nullptr; // Current safe version
+  }
+
+  std::shared_ptr<MediumInterface> get_medium_interface() const override
+  {
+    return object ? object->get_medium_interface() : nullptr; // Current safe version
   }
 };
 
@@ -173,6 +188,11 @@ public:
   std::shared_ptr<Hittable> get_underlying_shape() override
   {
     return object ? object->get_underlying_shape() : nullptr; // Current safe version
+  }
+
+  std::shared_ptr<MediumInterface> get_medium_interface() const override
+  {
+    return object ? object->get_medium_interface() : nullptr; // Current safe version
   }
 
 private:
