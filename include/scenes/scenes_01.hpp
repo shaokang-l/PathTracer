@@ -16,7 +16,7 @@ SceneInfo cornell_box()
     auto red = make_shared<Lambertian>(vec3(0.65, 0.05, 0.05));
     auto white = make_shared<Lambertian>(vec3(0.73f));
     auto green = make_shared<Lambertian>(vec3(0.12, 0.45, 0.15));
-    auto light = make_shared<DiffuseEmitter>(vec3(0.5, 0.4, 0), 25);
+    auto light = make_shared<DiffuseEmitter>(vec3(1.0f), 25);
     auto medium = make_shared<HomogeneousMedium>(vec3(0.0f), vec3(0.00025f), 1.0f, vec3(0.f), 1.0f, 0.0f);
     scene.global_medium = medium;
 

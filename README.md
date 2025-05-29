@@ -1,8 +1,6 @@
 # Path Tracer
 
-An NEE + MIS sampled path tracer, supports Disney Principled BSDF / Marschner Hair / Phong / Dielectric / Conductor material and various Monte Carlo effects. 
-
-<img src="https://s2.loli.net/2025/05/11/J6r89WGFh4kf7j3.png" alt="image-20250511035107124" style="zoom: 41%;" />
+An NEE + MIS path tracer, supports various BxDFs / Lights / Volumes and Monte Carlo effects.
 
 > Rough glass (alpha = 0.05) bunny with HDRI lighting
 
@@ -23,6 +21,14 @@ An NEE + MIS sampled path tracer, supports Disney Principled BSDF / Marschner Ha
 ![image](images/sample.png)
 
 > Left: Rough gold material, Right: Marschner Hair material
+
+
+
+![image](images/box_volume.png)
+
+> Cornell box with homogeneous fog, rendered with volumetric integrator.
+
+
 
 ## Build Instructions:
 
@@ -45,15 +51,16 @@ make .
 
 
 
-### MIS+NEE:
+### Integrator:
 
 * The path tracer uses an importance sampling strategy, a mixed PDF of Material PDF and light sampling with NEE (next-event-estimation).
 
-* Other method includes
+* Other integrator includes
 
+  * Volumetric path tracer (only null-tracking for now. NEE WIP)
   * An analytical calculation for Polygonal diffuse only lighting. (Ref. James Arvo)
   * Russian Roulette version MIS, w./w.o. NEE
-
+  
   
 
 ### Monte Carlo and Post-processing effects:
