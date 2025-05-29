@@ -2,6 +2,8 @@
 
 An NEE + MIS path tracer, supports various BxDFs / Lights / Volumes and Monte Carlo effects.
 
+<img src="images/hdri.png" alt="image" style="zoom: 105%;" />
+
 > Rough glass (alpha = 0.05) bunny with HDRI lighting
 
 
@@ -12,19 +14,19 @@ An NEE + MIS path tracer, supports various BxDFs / Lights / Volumes and Monte Ca
 
 
 
-<img src="https://s2.loli.net/2025/05/09/iXeMfBgGxCU1t6r.png" alt="output" style="zoom:67%;" />
+<img src="https://s2.loli.net/2025/05/09/iXeMfBgGxCU1t6r.png" alt="output" style="zoom:77%;" />
 
 >  Disney Principled Bunny with Microfacet Conductor background
 
 
 
-![image](images/sample.png)
+<img src="images/sample.png" alt="image" style="zoom:110%;" />
 
 > Left: Rough gold material, Right: Marschner Hair material
 
 
 
-![image](images/box_volume.png)
+<img src="images/box_volume.png" alt="image" style="zoom:110%;" />
 
 > Cornell box with homogeneous fog, rendered with volumetric integrator.
 
