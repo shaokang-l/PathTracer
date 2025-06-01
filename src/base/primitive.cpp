@@ -56,6 +56,7 @@ bool AARectangle<Axis::X>::intersect(const Ray &ray, HitRecord &hit_record,
       gl::vec2((d0 - this->_d0_min) / (this->_d0_max - this->_d0_min),
                (d1 - this->_d1_min) / (this->_d1_max - this->_d1_min));
   hit_record.medium_interface = this->medium_interface;
+  hit_record.surface_area = 2 * (this->_d0_max - this->_d0_min) * (this->_d1_max - this->_d1_min);
   return true;
 }
 
@@ -87,6 +88,7 @@ bool AARectangle<Axis::Y>::intersect(const Ray &ray, HitRecord &hit_record,
       gl::vec2((d0 - this->_d0_min) / (this->_d0_max - this->_d0_min),
                (d1 - this->_d1_min) / (this->_d1_max - this->_d1_min));
   hit_record.medium_interface = this->medium_interface;
+  hit_record.surface_area = 2 * (this->_d0_max - this->_d0_min) * (this->_d1_max - this->_d1_min);
   return true;
 }
 
@@ -118,6 +120,7 @@ bool AARectangle<Axis::Z>::intersect(const Ray &ray, HitRecord &hit_record,
       gl::vec2((d0 - this->_d0_min) / (this->_d0_max - this->_d0_min),
                (d1 - this->_d1_min) / (this->_d1_max - this->_d1_min));
   hit_record.medium_interface = this->medium_interface;
+  hit_record.surface_area = 2 * (this->_d0_max - this->_d0_min) * (this->_d1_max - this->_d1_min);
   return true;
 }
 

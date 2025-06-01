@@ -164,7 +164,7 @@ public:
     hit_record.texCoords.u() = fmodf(hit_record.texCoords.u() + 0.75f, 1.0f);
     hit_record.material = this->material;
     hit_record.medium_interface = this->medium_interface;
-
+    hit_record.surface_area = 4 * M_PI * this->radius * this->radius;
     return true;
   };
 

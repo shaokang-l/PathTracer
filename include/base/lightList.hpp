@@ -34,7 +34,18 @@ public:
     return this->lights[index % lights.size()];
   }
 
+  // light count excluding environment light
   uint64_t size() const { return this->lights.size(); }
+  uint64_t size_excluding_env() const
+  {
+    uint64_t count = 0;
+    for (auto light : this->lights)
+    {
+      if (light->type != LightType::ENVIRONMENT_LIGHT)
+        count++;
+    }
+    return count;
+  }
 
   std::shared_ptr<Light> getEnvironmentLight() const
   {

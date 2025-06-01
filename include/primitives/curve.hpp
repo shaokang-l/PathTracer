@@ -130,7 +130,7 @@ public:
     hit_record.material = this->material;
     hit_record.medium_interface = this->medium_interface;
     hit_record.set_normal(ray, bestN);
-
+    hit_record.surface_area = 2 * M_PI * (width0 + width1);
     return true;
   }
 

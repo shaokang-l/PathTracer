@@ -14,6 +14,12 @@ struct PolyLightInfo
   float intensity;
 };
 
+struct LightSampleContext
+{
+  gl::vec3 p;
+  gl::vec3 n;
+};
+
 class Light : public Object3D
 {
 public:

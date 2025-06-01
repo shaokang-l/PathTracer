@@ -80,6 +80,12 @@ gl::vec3 sampleT_maj(Ray &ray, float t_max, float u, F callback)
     return vec3(1.f);
 }
 
+inline gl::vec3 nee_light_sample()
+{
+    // TODO
+    return gl::vec3(0.f);
+}
+
 void update_medium_at_interface(Ray &ray, const HitRecord &hit_record)
 {
     if (hit_record.medium_interface)

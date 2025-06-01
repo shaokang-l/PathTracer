@@ -38,7 +38,13 @@ public:
     bool intersect(const Ray &ray, HitRecord &hit_record, float tmin = 0.0001,
                    float tmax = 10000.f) const override
     {
-        return _faces.intersect(ray, hit_record, tmin, tmax);
+        bool res = _faces.intersect(ray, hit_record, tmin, tmax);
+        // compute surface area of the box
+        float L = max_xyz.x() - min_xyz.x();
+        float W = max_xyz.y() - min_xyz.y();
+        float H = max_xyz.z() - min_xyz.z();
+        hit_record.surface_area = 2 * (L * W + L * H + W * H);
+        return res;
     };
 
     std::shared_ptr<MediumInterface> get_medium_interface() const override

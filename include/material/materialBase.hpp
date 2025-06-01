@@ -51,6 +51,7 @@ public:
   std::shared_ptr<MediumInterface> medium_interface = nullptr;
   gl::vec2 texCoords = gl::vec2(0.0f);
   gl::vec3 hair_tangent = gl::vec3(0.0f);
+  float surface_area = FLT_MAX;
   // the tangent of the hair, used for hair shading
 
   // Ref: rt in one weeknd

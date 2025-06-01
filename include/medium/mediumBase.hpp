@@ -5,6 +5,18 @@
 // wraps up the values that describe scattering and emission
 // at a point inside a medium.
 class Medium;
+
+// medium interaction record
+struct MediumRecord
+{
+    gl::vec3 p;
+    gl::vec3 wo;
+    std::shared_ptr<Medium> medium;
+    std::shared_ptr<PhaseFunction> phase_function;
+    MediumRecord(gl::vec3 p, gl::vec3 wo, std::shared_ptr<Medium> medium, std::shared_ptr<PhaseFunction> phase_function)
+        : p(p), wo(wo), medium(medium), phase_function(phase_function) {}
+};
+
 struct MediumProperties
 {
     gl::vec3 sigma_a;
