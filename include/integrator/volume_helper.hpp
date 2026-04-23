@@ -8,6 +8,18 @@
 #include "sampler/sampler.hpp"
 #include <concepts> // For std::invocable and std::same_as
 
+inline void update_medium_at_interface(Ray &ray, const HitRecord &hit_record)
+{
+    if (hit_record.medium_interface)
+    {
+        ray.current_medium = hit_record.is_inside ? hit_record.medium_interface->outside : hit_record.medium_interface->inside;
+    }
+    else
+    {
+        ray.current_medium = nullptr;
+    }
+};
+
 // MediumProperties is the type returned by curr_medium->sample_properties_at(...).
 template <typename Callable, typename PosType, typename PropsType, typename SigmaType, typename TransmittanceType>
 concept VolumeIntegratorCallable = requires(Callable &&func, PosType &&pos, PropsType &&props, SigmaType &&sigma, TransmittanceType &&transmittance) {
@@ -80,23 +92,124 @@ gl::vec3 sampleT_maj(Ray &ray, float t_max, float u, F callback)
     return vec3(1.f);
 }
 
-inline gl::vec3 nee_light_sample()
+inline gl::vec3 nee_light_sample(const gl::vec3 &wo_w, std::shared_ptr<MediumRecord> m_intr,
+                                 std::shared_ptr<HitRecord> hit_record,
+                                 gl::vec3 throughput,
+                                 gl::vec3 r_p,
+                                 const Hittable &prims,
+                                 const LightList &lights,
+                                 std::shared_ptr<BVHNode> bvh)
 {
-    // TODO
-    return gl::vec3(0.f);
-}
-
-void update_medium_at_interface(Ray &ray, const HitRecord &hit_record)
-{
-    if (hit_record.medium_interface)
+    using namespace gl;
+    LightSampleContext context;
+    if (hit_record && hit_record->material)
     {
-        ray.current_medium = hit_record.is_inside ? hit_record.medium_interface->outside : hit_record.medium_interface->inside;
+        context.p = hit_record->position;
+        context.n = hit_record->normal;
     }
     else
     {
-        ray.current_medium = nullptr;
+        context.p = m_intr->p;
     }
-};
+
+    auto light = lights.uniform_get();
+    if (!light)
+        return vec3(0.f);
+
+    // sample a point on the light
+    auto light_sample = light->get_sample(rand_num(), rand_num());
+    auto light_sample_pdf = 1.0f / (light->get_area() * lights.size());
+
+    if (light_sample_pdf < epsilon)
+        return gl::vec3(0.f);
+
+    // evaluate bsdf or phase function
+    float scatter_pdf;
+    vec3 f_hat;
+    vec3 L_e_from_light;
+
+    vec3 wo_world = wo_w.normalize();
+    vec3 wi_world = (light_sample - context.p).normalize();
+
+    HitRecord light_hit_rec;
+    light_hit_rec.position = light_sample;
+    light_hit_rec.texCoords = vec2(0.5f, 0.5f);
+    light_hit_rec.normal = light->get_normal_at(light_sample);
+
+    L_e_from_light = light->L_emit(light_hit_rec, -wi_world);
+
+    if (hit_record && hit_record->material)
+    {
+        f_hat = hit_record->material->f(wo_world, wi_world, *hit_record, MODE) * absDot(hit_record->normal, wi_world);
+        scatter_pdf = hit_record->material->scatter_pdf(wo_world, wi_world, *hit_record, MODE);
+    }
+    else
+    {
+        auto phase = m_intr->phase_function;
+        f_hat = phase->p(wo_world, wi_world);
+        scatter_pdf = phase->pdf(wo_world, wi_world);
+    }
+
+    if (f_hat.length() < epsilon)
+        return gl::vec3(0.f);
+
+    Ray shadow_ray(context.p, (light_sample - context.p).normalize(), 1.0f, m_intr ? m_intr->medium : nullptr);
+    vec3 T_ray(1.0f), r_l(1.0f), r_u(1.f);
+
+    while (shadow_ray.direction.length() > epsilon)
+    {
+        HitRecord shadow_hit_record;
+        bool is_shadow_hit = false;
+        is_shadow_hit = bvh ? bvh->intersect(shadow_ray, shadow_hit_record, 0.001f, (light_sample - context.p).length() - 0.001f)
+                            : prims.intersect(shadow_ray, shadow_hit_record, 0.001f, (light_sample - context.p).length() - 0.001f);
+
+        if (is_shadow_hit && shadow_hit_record.material)
+            return gl::vec3(0.f);
+
+        if (shadow_ray.current_medium)
+        {
+            float tMax = is_shadow_hit ? shadow_hit_record.t : (light_sample - context.p).length();
+            vec3 T_maj = sampleT_maj(shadow_ray, tMax, rand_num(),
+                                     [&](const gl::vec3 &p, const MediumProperties &mp,
+                                         const gl::vec3 &sigma_maj, const gl::vec3 &T_maj) -> bool
+                                     {
+                                         vec3 sigma_n = sigma_maj - mp.sigma_t();
+                                         float pdf = T_maj[0] * sigma_n[0];
+                                         if (pdf < epsilon)
+                                         {
+                                             throughput = vec3(0.f);
+                                             return false;
+                                         }
+                                         T_ray *= T_maj * sigma_n / pdf;
+                                         r_l *= T_maj * sigma_maj / pdf;
+                                         r_u *= T_maj * sigma_n / pdf;
+                                         return true;
+                                     });
+
+            T_ray *= T_maj / T_maj[0];
+            r_l *= T_maj / T_maj[0];
+            r_u *= T_maj / T_maj[0];
+        }
+
+        if (T_ray.length() < epsilon)
+            return gl::vec3(0.f);
+
+        if (!is_shadow_hit)
+            break;
+
+        shadow_ray.origin = shadow_ray.at(shadow_hit_record.t);
+        shadow_ray.direction = (light_sample - shadow_ray.origin);
+        update_medium_at_interface(shadow_ray, shadow_hit_record);
+    }
+
+    r_l *= r_p * light_sample_pdf;
+    r_u *= r_p * light_sample_pdf;
+
+    if ((r_u.length() + r_l.length()) < epsilon)
+        return gl::vec3(0.f);
+
+    return throughput * T_ray * f_hat * L_e_from_light / (r_u + r_l).average();
+}
 
 inline gl::vec3 nee_estimate(const gl::vec3 &p_scatter,
                              const gl::vec3 &wo_world, const int max_bounces,

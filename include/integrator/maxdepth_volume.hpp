@@ -15,7 +15,6 @@ getRayColor(Ray &ray, const ObjectList &prims, gl::vec3 bg_color,
     // MIS weights
     vec3 r_u(1.f);
     vec3 r_l(1.f);
-    float eta_scale = 1.f;
     int bounce = 0;
     bool specular_bounce = false;
     bool any_non_specular = false;
@@ -36,10 +35,10 @@ getRayColor(Ray &ray, const ObjectList &prims, gl::vec3 bg_color,
         else
             is_hit = bvh->intersect(ray, hit_record);
 
-        bool scattered = false, terminated = false;
         // start medium scattering sampling
         if (ray.current_medium)
         {
+            bool scattered = false, terminated = false;
             float t_max = is_hit ? hit_record.t : FLT_MAX;
 
             vec3 T_maj = sampleT_maj(
@@ -92,8 +91,9 @@ getRayColor(Ray &ray, const ObjectList &prims, gl::vec3 bg_color,
                             // direct light sampling
                             MediumRecord mrec(p, -ray.direction.normalize(),
                                               ray.current_medium, mp.phase_function);
-
-                            accum_L += nee_light_sample();
+                            std::shared_ptr<MediumRecord> m_intr = std::make_shared<MediumRecord>(mrec);
+                            // accum_L += throughput * nee_estimate(p, -ray.direction.normalize(), max_depth, ray.current_medium, prims, lights, bvh);
+                            accum_L += nee_light_sample(-ray.direction.normalize(), m_intr, nullptr, throughput, r_u, prims, lights, bvh);
                             PhaseRecord phase_rec;
                             bool is_sampled = mp.phase_function->sample_p(
                                 -ray.direction.normalize(), phase_rec, u_phase);
@@ -147,8 +147,6 @@ getRayColor(Ray &ray, const ObjectList &prims, gl::vec3 bg_color,
             throughput *= T_maj / T_maj[0];
             r_u *= T_maj / T_maj[0];
             r_l *= T_maj / T_maj[0];
-            scattered = true;
-            return false;
         }
 
         if (!is_hit)
@@ -168,7 +166,7 @@ getRayColor(Ray &ray, const ObjectList &prims, gl::vec3 bg_color,
             }
             else
             {
-                float lightPDF = env_light->pdf_value(prev_context.p, ray.direction.normalize());
+                float lightPDF = 1.f / (4.f * M_PI);
                 r_l *= lightPDF;
                 accum_L += throughput * env_color / (r_u + r_l).average();
             }
@@ -217,8 +215,10 @@ getRayColor(Ray &ray, const ObjectList &prims, gl::vec3 bg_color,
         prev_context.p = hit_record.position;
         if (mat->scatter(ray, hit_record, srec, uc, u, MODE))
         {
+            std::shared_ptr<HitRecord> hit_record_ptr = std::make_shared<HitRecord>(hit_record);
             if (!srec.is_specular())
-                accum_L += nee_light_sample();
+                // accum_L+=throughput * nee_estimate(hit_record.position, -ray.direction.normalize(), max_depth, ray.current_medium, prims, lights, bvh);
+                accum_L += nee_light_sample(-ray.direction.normalize(), nullptr, hit_record_ptr, throughput, r_u, prims, lights, bvh);
 
             if (srec.is_specular())
             {

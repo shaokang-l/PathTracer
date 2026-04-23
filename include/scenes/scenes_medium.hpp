@@ -15,8 +15,8 @@ SceneInfo absorption_only_medium()
     scene.objects.addObject(my_sphere);
 
     // In your scene setup:
-    gl::vec3 sigma_a = gl::vec3(1.5f, 1.5f, 1.5f);
-    gl::vec3 sigma_s = gl::vec3(0.0f, 0.0f, 0.0f);
+    gl::vec3 sigma_a = gl::vec3(0.f);
+    gl::vec3 sigma_s = gl::vec3(1e-3f);
     gl::vec3 Le_vol = gl::vec3(0.0f, 0.0f, 0.0f);
     float g_phase = 0.0f; // Not used by this integrator
 

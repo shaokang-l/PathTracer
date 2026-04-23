@@ -17,8 +17,9 @@ SceneInfo cornell_box()
     auto white = make_shared<Lambertian>(vec3(0.73f));
     auto green = make_shared<Lambertian>(vec3(0.12, 0.45, 0.15));
     auto light = make_shared<DiffuseEmitter>(vec3(1.0f), 25);
-    auto medium = make_shared<HomogeneousMedium>(vec3(0.0f), vec3(0.00025f), 1.0f, vec3(0.f), 1.0f, 0.0f);
-    scene.global_medium = medium;
+    auto medium = make_shared<HomogeneousMedium>(vec3(0.0f), vec3(0.0003f), 1.0f, vec3(0.f), 1.0f, 0.0f);
+    scene.global_medium = nullptr;
+    auto mi = make_shared<MediumInterface>(medium, nullptr);
 
     // std::array<gl::vec3, 4> vertices;
     // vertices[0] = {213, 554, 227};
@@ -27,7 +28,7 @@ SceneInfo cornell_box()
     // vertices[3] = {213, 554, 332};
 
     objects.addObject(make_shared<FlipFace>(
-        make_shared<AARectangle<Axis::Y>>(554, 100, 400, 100, 400, light)));
+        make_shared<AARectangle<Axis::Y>>(554, 213, 343, 227, 332, light)));
     objects.addObject(
         make_shared<AARectangle<Axis::X>>(555, 0, 555, 0, 555, green));
     objects.addObject(make_shared<AARectangle<Axis::X>>(0, 0, 555, 0, 555, red));
@@ -39,7 +40,7 @@ SceneInfo cornell_box()
         make_shared<AARectangle<Axis::Z>>(555, 0, 555, 0, 555, white));
 
     shared_ptr<Hittable> box_left =
-        make_shared<Box>(vec3(0.f), vec3(165, 330, 165), white);
+        make_shared<Box>(vec3(0.f), vec3(165, 330, 165), white, mi);
     box_left = make_shared<Rotate<Axis::Y>>(box_left, gl::to_radian(15.f));
     box_left = make_shared<Translate>(box_left, vec3(265, 0, 295));
     objects.addObject(box_left);
