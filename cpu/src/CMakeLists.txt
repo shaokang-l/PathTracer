@@ -30,12 +30,12 @@ target_compile_definitions(pathtracer
 target_include_directories(pathtracer
     PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/include
+    ${PATHTRACER_CPU_INCLUDE_DIR}
 )
 
 # ────────────────────────────────────────────────────────────────────
 # OpenMP
-# USE_OPENMP / OpenMP::OpenMP_CXX come from the root CMakeLists.txt.
+# USE_OPENMP / OpenMP::OpenMP_CXX come from cpu/CMakeLists.txt.
 # Linked PUBLIC so both main.cpp and tests see `_OPENMP` and <omp.h>.
 # ────────────────────────────────────────────────────────────────────
 if(USE_OPENMP)

@@ -3,10 +3,14 @@
 #include "primitives/triangleMesh.hpp"
 #include <gtest/gtest.h>
 
+#ifndef PATHTRACER_TEST_DATA_DIR
+#define PATHTRACER_TEST_DATA_DIR "data"
+#endif
+
 TEST(MeshLoader, SimpleTriangle) {
   using namespace gl;
   auto mat = gl::DefaultMaterial;
-  auto mesh = loadOBJMesh("../../tests/data/minimal.obj", mat);
+  auto mesh = loadOBJMesh(PATHTRACER_TEST_DATA_DIR "/minimal.obj", mat);
 
   auto const &md = mesh->getMeshData();
   // 3 verts, 1 face

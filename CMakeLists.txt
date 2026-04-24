@@ -1,5 +1,28 @@
 cmake_minimum_required(VERSION 3.19)
-project(PathTracer LANGUAGES C CXX)
+
+# ──────────────────────────────────────────────────────────────────────
+# Backend selection
+#
+# The CPU and GPU renderers live as two parallel subprojects under
+# cpu/ and gpu/. They share nothing at the code level — each one has
+# its own CMakeLists, its own headers, its own build rules. The only
+# thing that crosses the boundary is file-format-level data (scene
+# assets, not C++ types).
+#
+# Default: CPU on, GPU off.  Flip PATHTRACER_BUILD_GPU=ON to also
+# build the OWL/OptiX backend under gpu/.
+# ──────────────────────────────────────────────────────────────────────
+option(PATHTRACER_BUILD_CPU "Build the CPU path tracer (cpu/)"         ON)
+option(PATHTRACER_BUILD_GPU "Build the OWL/OptiX GPU renderer (gpu/)"  OFF)
+
+if(PATHTRACER_BUILD_GPU)
+    project(PathTracer LANGUAGES C CXX CUDA)
+    if(NOT CMAKE_CUDA_ARCHITECTURES)
+        set(CMAKE_CUDA_ARCHITECTURES 89 CACHE STRING "CUDA arch list (89 = RTX 40-series / Ada)")
+    endif()
+else()
+    project(PathTracer LANGUAGES C CXX)
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,69 +36,45 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Debug Release RelWithDebInfo MinSizeRel)
 endif()
 
-option(PATHTRACER_BUILD_TESTS "Build unit tests" ON)
-
-# Add cmake modules directory
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-
-# ────────────────────────────────────────────────────────────────────
-# MSVC / Windows quality-of-life
-# ────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────
+# MSVC / Windows quality-of-life (applies to both backends)
+#
+# Scope the MSVC-only flags to C/CXX via a generator expression so they
+# don't leak into nvcc (where `/utf-8` etc. would be misread as input
+# filenames). Preprocessor defines are safe for all languages.
+# ──────────────────────────────────────────────────────────────────────
 if(MSVC)
-    # UTF-8 source + execution charset, big object files (stb_image.h etc.),
-    # and exposing M_PI / M_SQRT2 / ... from <cmath>.
-    add_compile_options(/utf-8 /bigobj /permissive-)
+    add_compile_options(
+        "$<$<COMPILE_LANGUAGE:C,CXX>:/utf-8>"
+        "$<$<COMPILE_LANGUAGE:C,CXX>:/bigobj>"
+        "$<$<COMPILE_LANGUAGE:C,CXX>:/permissive->"
+    )
     add_compile_definitions(_USE_MATH_DEFINES NOMINMAX _CRT_SECURE_NO_WARNINGS)
 endif()
 
-# ────────────────────────────────────────────────────────────────────
-# OpenMP
-#
-# We try find_package first (works for MSVC, GCC, Clang on Linux, and
-# AppleClang when libomp is discoverable via CMake). On macOS with
-# Homebrew libomp we fall back to a manual interface target so the rest
-# of the build can uniformly link against `OpenMP::OpenMP_CXX`.
-# ────────────────────────────────────────────────────────────────────
-find_package(OpenMP QUIET)
+# Enable CTest at the root so `ctest --test-dir build` works regardless
+# of which subproject(s) own the test targets. Subprojects can still
+# call add_test() / gtest_discover_tests() from their own CMakeLists.
+enable_testing()
 
-if(OpenMP_CXX_FOUND)
-    message(STATUS "OpenMP found (C: ${OpenMP_C_VERSION}, CXX: ${OpenMP_CXX_VERSION})")
-    set(USE_OPENMP TRUE)
-elseif(APPLE)
-    # Manual OpenMP support on macOS/Homebrew
-    execute_process(
-        COMMAND brew --prefix libomp
-        OUTPUT_VARIABLE LIBOMP_ROOT
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET
-    )
-
-    if(LIBOMP_ROOT AND EXISTS "${LIBOMP_ROOT}/include/omp.h")
-        message(STATUS "Using Homebrew libomp at ${LIBOMP_ROOT}")
-
-        # Create an imported target that mirrors OpenMP::OpenMP_CXX so
-        # downstream code can use a single name.
-        add_library(OpenMP::OpenMP_CXX INTERFACE IMPORTED)
-        target_compile_options(OpenMP::OpenMP_CXX INTERFACE -Xpreprocessor -fopenmp)
-        target_include_directories(OpenMP::OpenMP_CXX INTERFACE "${LIBOMP_ROOT}/include")
-        target_link_directories(OpenMP::OpenMP_CXX INTERFACE "${LIBOMP_ROOT}/lib")
-        target_link_libraries(OpenMP::OpenMP_CXX INTERFACE omp)
-        set(USE_OPENMP TRUE)
-    else()
-        message(WARNING "libomp not found via Homebrew, disabling OpenMP")
-        set(USE_OPENMP FALSE)
-    endif()
-else()
-    message(WARNING "OpenMP not found, disabling parallel rendering")
-    set(USE_OPENMP FALSE)
+# ──────────────────────────────────────────────────────────────────────
+# Subprojects
+# ──────────────────────────────────────────────────────────────────────
+if(PATHTRACER_BUILD_CPU)
+    add_subdirectory(cpu)
 endif()
 
-# ────────────────────────────────────────────────────────────────────
-# Subprojects
-# ────────────────────────────────────────────────────────────────────
-add_subdirectory(src)
-
-if(PATHTRACER_BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
+# GPU backend: OWL + gpu/
+# EXCLUDE_FROM_ALL on OWL so we don't pull its own samples into our
+# default build (the `mypt` target still resolves owl::owl / owl_viewer
+# via add_subdirectory, it just doesn't force them to compile unless
+# something links them).
+if(PATHTRACER_BUILD_GPU)
+    if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/owl/CMakeLists.txt)
+        message(FATAL_ERROR
+            "PATHTRACER_BUILD_GPU=ON but third_party/owl/ is missing. "
+            "Did you run: git submodule update --init --recursive ?")
+    endif()
+    add_subdirectory(third_party/owl EXCLUDE_FROM_ALL)
+    add_subdirectory(gpu)
 endif()

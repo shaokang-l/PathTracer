@@ -49,13 +49,18 @@ foreach(test_name IN LISTS PATHTRACER_TESTS)
     )
     target_include_directories(${test_name}
         PRIVATE
-        ${PROJECT_SOURCE_DIR}/include
+        ${PATHTRACER_CPU_INCLUDE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
-    # Register each TEST() case with CTest individually. WORKING_DIRECTORY
-    # is set so tests that load assets via relative paths (e.g.
-    # "../../tests/data/minimal.obj") continue to work.
+    # Pass the absolute path to cpu/tests/data/ into each test so they
+    # don't have to guess where the cwd is at launch time.
+    target_compile_definitions(${test_name}
+        PRIVATE
+        PATHTRACER_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data"
+    )
+
+    # Register each TEST() case with CTest individually.
     gtest_discover_tests(${test_name}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         DISCOVERY_TIMEOUT 30
