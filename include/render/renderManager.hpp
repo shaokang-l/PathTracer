@@ -95,13 +95,12 @@ struct SceneInfo
     }
 
 #pragma omp parallel for
+    for (int i = 0; i < _width; i++)
     {
-      for (int i = 0; i < _width; i++)
-      {
 
-        if (show_progress)
-          std::cout << "Now scanning " << (float(counter) / _width) * 100.f
-                    << " %" << std::endl;
+      if (show_progress)
+        std::cout << "Now scanning " << (float(counter) / _width) * 100.f
+                  << " %" << std::endl;
 
         for (int j = 0; j < _height; j++)
         {
@@ -150,8 +149,7 @@ struct SceneInfo
           }
         }
 
-        counter++;
-      }
+      counter++;
     }
 
     fb.writeToFile(out_path, GAMMA);

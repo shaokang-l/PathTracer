@@ -1,0 +1,43 @@
+# Project-level clangd config.
+# See https://clangd.llvm.org/config
+CompileFlags:
+  # Let clangd pick up Win/MSVC-specific bits consistently.
+  Add:
+    - -D_USE_MATH_DEFINES
+    - -DNOMINMAX
+    - -D_CRT_SECURE_NO_WARNINGS
+  # Stop clangd from complaining about MSVC-only flags it doesn't need to know about.
+  Remove:
+    - -Zi
+    - -Ob0
+    - -Od
+    - -RTC1
+    - -FS
+    - /FS
+    - /permissive-
+    - -permissive-
+    - /utf-8
+    - -utf-8
+    - -Fd*
+    - -Fo*
+    - /Fd*
+    - /Fo*
+    - -openmp
+    - /openmp
+    - --driver-mode=cl
+
+Diagnostics:
+  # These often flag the vendored stb_* / tinyobj headers we don't control.
+  Suppress:
+    - -Wmicrosoft-include
+    - -Wmicrosoft-enum-value
+  UnusedIncludes: None
+  MissingIncludes: None
+
+InlayHints:
+  Enabled: Yes
+  ParameterNames: Yes
+  DeducedTypes: Yes
+
+Index:
+  Background: Build

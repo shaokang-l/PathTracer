@@ -4,6 +4,7 @@
 #include "utils/utility.hpp"
 #include <algorithm>
 #include <cstdlib>
+#include <functional>
 
 class BVHNode : public Hittable
 {

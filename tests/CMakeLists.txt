@@ -1,53 +1,63 @@
 # tests/CMakeLists.txt
-find_package(GTest REQUIRED)
-include_directories(${GTEST_INCLUDE_DIRS}
-    ${PROJECT_SOURCE_DIR}/include)
+#
+# GoogleTest is fetched automatically via FetchContent so the project
+# builds out of the box on Windows, Linux, and macOS without a pre-
+# installed GTest. Set -DPATHTRACER_USE_SYSTEM_GTEST=ON to prefer an
+# already-installed copy.
 
-add_executable(test_mesh_io test_mesh_io.cpp)
-target_link_libraries(test_mesh_io
-    PRIVATE
-    pathtracer # your main renderer library
-    ${GTEST_BOTH_LIBRARIES}
-    pthread)
+include(FetchContent)
 
-add_executable(test_hair_pdf test_hair_pdf.cpp)
-target_link_libraries(test_hair_pdf
-    PRIVATE
-    pathtracer # your main renderer library
-    ${GTEST_BOTH_LIBRARIES}
-    pthread)
+option(PATHTRACER_USE_SYSTEM_GTEST "Use system-installed GoogleTest instead of FetchContent" OFF)
 
-add_executable(test_halton test_halton.cpp)
-target_link_libraries(test_halton
-    PRIVATE
-    pathtracer # your main renderer library
-    ${GTEST_BOTH_LIBRARIES}
-    pthread)
+if(PATHTRACER_USE_SYSTEM_GTEST)
+    find_package(GTest REQUIRED)
+else()
+    # Make gtest play nicely with MSVC's /MD runtime used by this project.
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
-add_executable(test_refract test_refract.cpp)
-target_link_libraries(test_refract
-    PRIVATE
-    pathtracer # your main renderer library
-    ${GTEST_BOTH_LIBRARIES}
-    pthread)
+    FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG        v1.14.0
+        GIT_SHALLOW    TRUE
+    )
+    FetchContent_MakeAvailable(googletest)
+endif()
 
-add_executable(test_dielectric test_dielectric.cpp)
-target_link_libraries(test_dielectric
-    PRIVATE
-    pathtracer # your main renderer library
-    ${GTEST_BOTH_LIBRARIES}
-    pthread)
+# Portable "threads" library (maps to pthread on Unix, no-op on MSVC).
+find_package(Threads REQUIRED)
 
-add_executable(test_pdf_normalization test_pdf_normalization.cpp)
-target_link_libraries(test_pdf_normalization
-    PRIVATE
-    pathtracer # your main renderer library
-    ${GTEST_BOTH_LIBRARIES}
-    pthread)
+include(GoogleTest)
 
-add_test(NAME MeshIO COMMAND test_mesh_io)
-add_test(NAME HairPDF COMMAND test_hair_pdf)
-add_test(NAME Halton COMMAND test_halton)
-add_test(NAME Refract COMMAND test_refract)
-add_test(NAME Dielectric COMMAND test_dielectric)
-add_test(NAME PDFNormalization COMMAND test_pdf_normalization)
+set(PATHTRACER_TESTS
+    test_mesh_io
+    test_hair_pdf
+    test_halton
+    test_refract
+    test_dielectric
+    test_pdf_normalization
+)
+
+foreach(test_name IN LISTS PATHTRACER_TESTS)
+    add_executable(${test_name} ${test_name}.cpp)
+    target_link_libraries(${test_name}
+        PRIVATE
+        pathtracer
+        GTest::gtest
+        GTest::gtest_main
+        Threads::Threads
+    )
+    target_include_directories(${test_name}
+        PRIVATE
+        ${PROJECT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    # Register each TEST() case with CTest individually. WORKING_DIRECTORY
+    # is set so tests that load assets via relative paths (e.g.
+    # "../../tests/data/minimal.obj") continue to work.
+    gtest_discover_tests(${test_name}
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        DISCOVERY_TIMEOUT 30
+    )
+endforeach()

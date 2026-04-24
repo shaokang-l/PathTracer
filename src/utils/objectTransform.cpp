@@ -1,4 +1,12 @@
 #include "utils/objectTransform.hpp"
+
+// MAXFLOAT is a POSIX/BSD/Apple-only macro. MSVC doesn't define it, so
+// fall back to FLT_MAX which is the standard portable equivalent.
+#include <cfloat>
+#ifndef MAXFLOAT
+#define MAXFLOAT FLT_MAX
+#endif
+
 template <> AABB Rotate<Axis::X>::getAABB(float t0, float t1) {
   using namespace gl;
   using namespace std;

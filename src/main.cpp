@@ -52,7 +52,7 @@ int main()
   // SceneInfo scene = debug_curve();
 
   // Output to the project folder
-  scene.renderWithInfo("../../../Offline/output.png");
+  scene.renderWithInfo("./output.png");
   std::cout << rejects << std::endl;
   return 0;
 };

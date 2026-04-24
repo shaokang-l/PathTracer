@@ -16,48 +16,65 @@ set(SRC_CPP
     base/objectList.cpp
 )
 
-add_compile_definitions(GL_SIMD)
-
-# add_compile_definitions(DISCARD_SAMPLING)
-add_compile_definitions(BIASED_SAMPLING)
-
-# FBX SDK configuration (optional)
-find_package(FBX QUIET)
-
-if(FBX_FOUND)
-    message(STATUS "FBX SDK found - enabling FBX support")
-    list(APPEND SRC_CPP mesh_io/fbxLoader.cpp)
-    add_compile_definitions(HAS_FBX_SDK)
-else()
-    message(STATUS "FBX SDK not found - FBX support will be disabled")
-endif()
-
 add_library(pathtracer STATIC ${SRC_CPP})
 
-# Set up include directories
+target_compile_definitions(pathtracer
+    PUBLIC
+    GL_SIMD
+    BIASED_SAMPLING
+
+    # Uncomment to enable discard sampling instead
+    # DISCARD_SAMPLING
+)
+
 target_include_directories(pathtracer
     PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/include
 )
 
+# ────────────────────────────────────────────────────────────────────
+# OpenMP
+# USE_OPENMP / OpenMP::OpenMP_CXX come from the root CMakeLists.txt.
+# Linked PUBLIC so both main.cpp and tests see `_OPENMP` and <omp.h>.
+# ────────────────────────────────────────────────────────────────────
+if(USE_OPENMP)
+    target_link_libraries(pathtracer PUBLIC OpenMP::OpenMP_CXX)
+endif()
+
+# ────────────────────────────────────────────────────────────────────
+# FBX SDK (optional)
+# ────────────────────────────────────────────────────────────────────
+find_package(FBX QUIET)
+
 if(FBX_FOUND)
+    message(STATUS "FBX SDK found - enabling FBX support")
+    target_sources(pathtracer PRIVATE mesh_io/fbxLoader.cpp)
+    target_compile_definitions(pathtracer PUBLIC HAS_FBX_SDK)
     target_include_directories(pathtracer PUBLIC ${FBX_INCLUDE_DIRS})
     target_link_libraries(pathtracer PRIVATE ${FBX_LIBRARIES})
+else()
+    message(STATUS "FBX SDK not found - FBX support will be disabled")
 endif()
 
-if(USE_OPENMP)
-    target_link_libraries(pathtracer PRIVATE ${OPENMP_LIB})
-endif()
+# ────────────────────────────────────────────────────────────────────
+# Main executable
+#
+# The CMake target is named `pathtracer_app` to avoid colliding with
+# the root project name (`PathTracer`) under the Visual Studio
+# generator, which would otherwise produce two `PathTracer.vcxproj`
+# files in the same solution. OUTPUT_NAME keeps the produced binary
+# called `PathTracer(.exe)`.
+# ────────────────────────────────────────────────────────────────────
+add_executable(pathtracer_app main.cpp)
+set_target_properties(pathtracer_app PROPERTIES OUTPUT_NAME PathTracer)
+target_link_libraries(pathtracer_app PRIVATE pathtracer)
 
-add_executable(PathTracer main.cpp)
-target_link_libraries(PathTracer PRIVATE pathtracer)
-
-# Copy FBX SDK libraries to build directory if FBX is enabled
+# Copy FBX SDK libraries to build directory if FBX is enabled (macOS only)
 if(FBX_FOUND AND APPLE)
-    add_custom_command(TARGET PathTracer POST_BUILD
+    add_custom_command(TARGET pathtracer_app POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         "/Applications/Autodesk/FBX SDK/2020.3.7/lib/clang/release"
-        $<TARGET_FILE_DIR:PathTracer>
+        $<TARGET_FILE_DIR:pathtracer_app>
     )
 endif()
