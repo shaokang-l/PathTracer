@@ -20,7 +20,7 @@ int main(int /*argc*/, char ** /*argv*/)
             << std::endl;
 
   mypt::Renderer renderer;
-  renderer.setSamplesPerPixel(1);
+  renderer.setSamplesPerPixel(4);
   renderer.setMaxBounces(8);
   renderer.setScene(scene);
 

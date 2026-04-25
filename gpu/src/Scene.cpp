@@ -43,39 +43,63 @@ namespace mypt {
     using owl::vec3f;
     Scene s;
 
+    MaterialGPU lambertian_0;
+    lambertian_0.kind = MATERIAL_LAMBERTIAN;
+    lambertian_0.albedo = vec3f(0.75f, 0.75f, 0.75f);
+    s.materials.push_back(lambertian_0);
+
+    MaterialGPU lambertian_1;
+    lambertian_1.kind = MATERIAL_LAMBERTIAN;
+    lambertian_1.albedo = vec3f(0.65f, 0.05f, 0.05f);
+    s.materials.push_back(lambertian_1);
+
+    MaterialGPU Lambertian_2;
+    Lambertian_2.kind = MATERIAL_LAMBERTIAN;
+    Lambertian_2.albedo = vec3f(0.12f, 0.45f, 0.15f);
+    s.materials.push_back(Lambertian_2);
+    
+    MaterialGPU Lambertian_3;
+    Lambertian_3.kind = MATERIAL_LAMBERTIAN;
+    Lambertian_3.albedo = vec3f(0.8f, 0.7f, 0.3f);
+    s.materials.push_back(Lambertian_3);
+
+    MaterialGPU mirror;
+    mirror.kind = MATERIAL_MIRROR;
+    mirror.albedo = vec3f(0.95f);
+    s.materials.push_back(mirror);
+    
+    MaterialGPU emissive;
+    emissive.kind = MATERIAL_EMISSIVE;
+    emissive.emission = vec3f(18.f, 18.f, 16.f);
+    s.materials.push_back(emissive);
+
     TriangleMesh floor;
-    floor.material.kind     = MATERIAL_LAMBERTIAN;
-    floor.material.albedo   = vec3f(0.75f, 0.75f, 0.75f);
+    floor.materialId = 0;
     pushBox(floor, vec3f(-5.f, -0.1f, -5.f), vec3f(5.f, 0.f, 5.f));
     s.meshes.push_back(std::move(floor));
 
     TriangleMesh leftWall;
-    leftWall.material.kind   = MATERIAL_LAMBERTIAN;
-    leftWall.material.albedo = vec3f(0.65f, 0.05f, 0.05f);
+    leftWall.materialId = 1;
     pushBox(leftWall, vec3f(-5.0f, 0.f, -5.f), vec3f(-4.9f, 5.f, 5.f));
     s.meshes.push_back(std::move(leftWall));
 
     TriangleMesh rightWall;
-    rightWall.material.kind   = MATERIAL_LAMBERTIAN;
-    rightWall.material.albedo = vec3f(0.12f, 0.45f, 0.15f);
+    rightWall.materialId = 2;
     pushBox(rightWall, vec3f(4.9f, 0.f, -5.f), vec3f(5.0f, 5.f, 5.f));
     s.meshes.push_back(std::move(rightWall));
 
     TriangleMesh diffuseBox;
-    diffuseBox.material.kind   = MATERIAL_LAMBERTIAN;
-    diffuseBox.material.albedo = vec3f(0.8f, 0.7f, 0.3f);
+    diffuseBox.materialId = 3;
     pushBox(diffuseBox, vec3f(-2.0f, 0.f, -1.5f), vec3f(-0.5f, 2.5f, 0.0f));
     s.meshes.push_back(std::move(diffuseBox));
 
     TriangleMesh mirrorBox;
-    mirrorBox.material.kind   = MATERIAL_MIRROR;
-    mirrorBox.material.albedo = vec3f(0.95f);
+    mirrorBox.materialId = 4;
     pushBox(mirrorBox, vec3f(0.5f, 0.f, -0.5f), vec3f(2.0f, 1.5f, 1.0f));
     s.meshes.push_back(std::move(mirrorBox));
 
     TriangleMesh light;
-    light.material.kind     = MATERIAL_EMISSIVE;
-    light.material.emission = vec3f(18.f, 18.f, 16.f);
+    light.materialId = 5;
     pushBox(light, vec3f(-1.5f, 4.9f, -1.5f), vec3f(1.5f, 5.0f, 1.5f));
     s.meshes.push_back(std::move(light));
 

@@ -46,6 +46,12 @@ namespace mypt {
     case '+': case '=':
       std::cerr << "[mypt] (key) not yet bound to spp/bounces" << std::endl;
       break;
+    case 'r':
+      renderer_.updateMaterialBuffer();
+      break;
+    case 'o':
+      renderer_.restoreOriginalMaterials();
+      break;
     default:
       OWLViewer::key(k, where);
     }

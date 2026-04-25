@@ -58,11 +58,19 @@ namespace mypt {
 
     int  accumID() const { return accumID_; }
 
+    // Ex. 01: update the material buffer, so that all materials are lambertian red
+    // This function is called when the user presses the 'r' key in the viewer
+    // This illustrates the concept of "updating the material buffer" on the fly, 
+    // without having to rebuild the SBT (i.e. bindless materials)
+    void updateMaterialBuffer();
+    void restoreOriginalMaterials();
+
   private:
     void buildAccel(const Scene &scene);
     void buildPrograms();
     void updateLaunchParams();
     void resetAccum();
+
 
     OWLContext       ctx_           = nullptr;
     OWLModule        module_        = nullptr;
@@ -76,10 +84,13 @@ namespace mypt {
     std::vector<OWLBuffer> indexBufs_;
     std::vector<OWLGeom>   geoms_;
 
+    std::vector<MaterialGPU> originalMaterials_; // store the original materials, so that we can restore them later
+
     OWLGroup         blas_          = nullptr;
     OWLGroup         world_         = nullptr;
 
     OWLBuffer        accumBuffer_   = nullptr;
+    OWLBuffer        materialBuffer_ = nullptr;
 
     owl::vec2i       fbSize_        = { 0, 0 };
     uint32_t        *fbPtr_         = nullptr;

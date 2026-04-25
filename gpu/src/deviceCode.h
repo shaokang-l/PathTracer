@@ -46,7 +46,7 @@ struct MaterialGPU {
 struct TriangleMeshSBT {
   vec3f       *vertex;   // device pointer
   vec3i       *index;    // device pointer
-  MaterialGPU  material;
+  int32_t     materialId;
 };
 
 // ------------------------------------------------------------------
@@ -76,7 +76,9 @@ struct LaunchParams {
   float4              *accumBuffer;
   // final display buffer: 8-bit RGBA, owned by OWLViewer via CUDA/GL interop
   uint32_t            *fbPtr;
+  // global material buffer, use materialId to index into this buffer
   vec2i                fbSize;
+  MaterialGPU         *materials;
   int                  accumID;       // frames accumulated so far
   int                  samplesPerPixel;
   int                  maxBounces;

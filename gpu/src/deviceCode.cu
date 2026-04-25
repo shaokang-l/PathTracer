@@ -41,6 +41,7 @@ OPTIX_CLOSEST_HIT_PROGRAM(TriangleMesh)()
 {
   PRD &prd = owl::getPRD<PRD>();
   const TriangleMeshSBT &self = owl::getProgramData<TriangleMeshSBT>();
+  const MaterialGPU &material = optixLaunchParams.materials[self.materialId];
 
   const int   primID = optixGetPrimitiveIndex();
   const vec3i idx    = self.index[primID];
@@ -56,10 +57,10 @@ OPTIX_CLOSEST_HIT_PROGRAM(TriangleMesh)()
   const float tHit = optixGetRayTmax();
   prd.hitP       = (vec3f)optixGetWorldRayOrigin() + tHit * rayDir;
   prd.N          = N;
-  prd.material   = self.material;
+  prd.material   = material;
   prd.didHit     = true;
-  prd.isEmissive = (self.material.kind == MATERIAL_EMISSIVE);
-  prd.emission   = self.material.emission;
+  prd.isEmissive = (material.kind == MATERIAL_EMISSIVE);
+  prd.emission   = material.emission;
 }
 
 // ------------------------------------------------------------------

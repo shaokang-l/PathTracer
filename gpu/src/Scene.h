@@ -26,11 +26,13 @@ namespace mypt {
   struct TriangleMesh {
     std::vector<owl::vec3f> vertices;
     std::vector<owl::vec3i> indices;
-    MaterialGPU             material;
+    int32_t                 materialId;
   };
 
   struct Scene {
     std::vector<TriangleMesh> meshes;
+    // global material buffer, use materialId to index into this buffer
+    std::vector<MaterialGPU> materials;
 
     // Optional: world-space bounds, used to set a sensible camera speed.
     owl::box3f bounds;

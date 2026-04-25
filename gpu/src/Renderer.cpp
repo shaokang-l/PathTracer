@@ -1,6 +1,7 @@
 #include "Renderer.h"
 
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <iostream>
 
@@ -29,7 +30,7 @@ namespace mypt {
     OWLVarDecl triMeshVars[] = {
       { "vertex",   OWL_BUFPTR,                OWL_OFFSETOF(TriangleMeshSBT, vertex)   },
       { "index",    OWL_BUFPTR,                OWL_OFFSETOF(TriangleMeshSBT, index)    },
-      { "material", OWL_USER_TYPE(MaterialGPU),OWL_OFFSETOF(TriangleMeshSBT, material) },
+      { "materialId", OWL_INT,                 OWL_OFFSETOF(TriangleMeshSBT, materialId) },
       {}
     };
     triMeshType_ = owlGeomTypeCreate(ctx_,
@@ -57,6 +58,7 @@ namespace mypt {
       { "accumBuffer",    OWL_RAW_POINTER, OWL_OFFSETOF(LaunchParams, accumBuffer)    },
       { "fbPtr",          OWL_RAW_POINTER, OWL_OFFSETOF(LaunchParams, fbPtr)          },
       { "fbSize",         OWL_INT2,        OWL_OFFSETOF(LaunchParams, fbSize)         },
+      { "materials",      OWL_RAW_POINTER, OWL_OFFSETOF(LaunchParams, materials)      },
       { "accumID",        OWL_INT,         OWL_OFFSETOF(LaunchParams, accumID)        },
       { "samplesPerPixel",OWL_INT,         OWL_OFFSETOF(LaunchParams, samplesPerPixel)},
       { "maxBounces",     OWL_INT,         OWL_OFFSETOF(LaunchParams, maxBounces)     },
@@ -79,6 +81,7 @@ namespace mypt {
     indexBufs_.reserve(scene.meshes.size());
     geoms_.reserve(scene.meshes.size());
 
+
     for (const auto &m : scene.meshes) {
       OWLBuffer vb = owlDeviceBufferCreate(ctx_, OWL_FLOAT3,
                                            m.vertices.size(),
@@ -86,6 +89,7 @@ namespace mypt {
       OWLBuffer ib = owlDeviceBufferCreate(ctx_, OWL_INT3,
                                            m.indices.size(),
                                            m.indices.data());
+
       vertexBufs_.push_back(vb);
       indexBufs_.push_back(ib);
 
@@ -94,9 +98,15 @@ namespace mypt {
       owlTrianglesSetIndices (g, ib, m.indices.size(),  sizeof(vec3i), 0);
       owlGeomSetBuffer(g, "vertex", vb);
       owlGeomSetBuffer(g, "index",  ib);
-      owlGeomSetRaw   (g, "material", &m.material);
+      owlGeomSet1i(g, "materialId", m.materialId);
       geoms_.push_back(g);
     }
+
+    // upload material buffer
+    materialBuffer_ = owlDeviceBufferCreate(ctx_, OWL_USER_TYPE(MaterialGPU),
+                                           scene.materials.size(),
+                                           scene.materials.data());
+    originalMaterials_ = scene.materials;
 
     buildAccel(scene);
 
@@ -125,6 +135,24 @@ namespace mypt {
     if (accumBuffer_) owlBufferRelease(accumBuffer_);
     accumBuffer_ = owlDeviceBufferCreate(ctx_, OWL_FLOAT4,
                                          fbSize.x * fbSize.y, nullptr);
+    resetAccum();
+  }
+
+  void Renderer::updateMaterialBuffer()
+  {
+    const size_t count = owlBufferSizeInBytes(materialBuffer_) / sizeof(MaterialGPU);
+    std::vector<MaterialGPU> newMats(count);
+    for (auto &m : newMats) {
+        m.kind   = MATERIAL_LAMBERTIAN;
+        m.albedo = vec3f(1.0f, 0.0f, 0.0f);
+    }
+    owlBufferUpload(materialBuffer_, newMats.data());
+    resetAccum();
+  }
+
+  void Renderer::restoreOriginalMaterials()
+  {
+    owlBufferUpload(materialBuffer_, originalMaterials_.data());
     resetAccum();
   }
 
@@ -158,6 +186,10 @@ namespace mypt {
                       : 0));
     owlParamsSet1ul(lp_, "fbPtr", (uint64_t)fbPtr_);
     owlParamsSet2i (lp_, "fbSize", fbSize_.x, fbSize_.y);
+    owlParamsSet1ul(lp_, "materials",
+      (uint64_t)(materialBuffer_
+        ? owlBufferGetPointer(materialBuffer_, 0)
+        : 0));
     owlParamsSet1i (lp_, "accumID", accumID_);
     owlParamsSet1i (lp_, "samplesPerPixel", samplesPerPixel_);
     owlParamsSet1i (lp_, "maxBounces", maxBounces_);
