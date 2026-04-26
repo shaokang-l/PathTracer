@@ -39,7 +39,6 @@ struct MaterialGPU {
   float  ior;            // dielectric index of refraction
   float  roughness;      // reserved for future use
 };
-
 // ------------------------------------------------------------------
 // Per-geom SBT record (one per OWLGeom, filled via owlGeomSet*)
 // ------------------------------------------------------------------

@@ -6,8 +6,8 @@
 // that this .cu includes (here: Materials.h).
 // ======================================================================== //
 
+#include "bsdf.h"
 #include "deviceCode.h"
-#include "Materials.h"
 #include <optix_device.h>
 
 using namespace owl;
@@ -118,11 +118,23 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
       }
       if (!prd.didHit) break;
 
+      // 01. BSDF Wrapper and ONB
+      const OrthoBasis basis = makeOrthoBasis(prd.N);
+      const BSDF bsdf(basis, &prd.material);
+
+      // 02. generate uc and u from RNG
+      const float uc = rng();
+      const vec2f u(rng(), rng());
+
+      // 03. sample BSDF
       BSDFSample sample;
       const vec3f wo = -rayDir;
-      if (!sampleBSDF(prd.material, wo, prd.N, rng, sample)) break;
+      if (!bsdf.sample_f(wo, uc, u, sample)) break;
+      if(sample.pdf <= 0.f) break;
 
-      throughput = throughput * sample.throughput;
+      // 04. update throughput, lo = f*cos*Li/pdf
+      const float cosTheta = fabsf(dot(sample.wi, prd.N));
+      throughput *= sample.f*cosTheta/sample.pdf;
 
       const float pRR = fminf(0.95f, fmaxf(throughput.x,
                               fmaxf(throughput.y, throughput.z)));
@@ -132,7 +144,7 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
       }
 
       rayOrigin = prd.hitP;
-      rayDir    = sample.direction;
+      rayDir    = sample.wi;
     }
 
     L = L + radiance;
