@@ -16,7 +16,6 @@
 #pragma once
 
 #include "Scene.h"
-#include "deviceCode.h"
 
 #include <owl/owl.h>
 #include <vector>

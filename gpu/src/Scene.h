@@ -8,14 +8,14 @@
 //
 // When you port your path tracer:
 //   - map your Mesh / Shape objects -> TriangleMesh below
-//   - map your Material hierarchy   -> MaterialGPU in deviceCode.h
+//   - map your Material hierarchy   -> MaterialGPU in material.h
 //     (you'll probably want a small translator function in Scene.cpp
 //      that flattens your polymorphic Material* into MaterialGPU)
 // ======================================================================== //
 
 #pragma once
 
-#include "deviceCode.h"
+#include "material.h"
 
 #include <owl/common/math/vec.h>
 #include <owl/common/math/box.h>

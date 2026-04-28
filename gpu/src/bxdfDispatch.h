@@ -8,14 +8,14 @@
 //
 // Adding a new BxDF:
 //   1. Drop a new file under bxdf/<NewBxDF>.h with the same three methods.
-//   2. Add an enum value to MaterialKind in deviceCode.h.
+//   2. Add an enum value to MaterialKind in material.h.
 //   3. Add the relevant params to MaterialGPU (or split it later).
 //   4. Add one case to each of the three switches below.
 // ======================================================================== //
 
 #pragma once
 
-#include "deviceCode.h"
+#include "material.h"
 #include "bsdfSample.h"
 #include "bxdf/Lambertian.h"
 #include "bxdf/Mirror.h"

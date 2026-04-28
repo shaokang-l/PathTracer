@@ -3,12 +3,14 @@
 //
 // This is the ONLY file compiled to PTX and embedded into the binary.
 // Keep it as small as possible; put reusable device code in headers
-// that this .cu includes (here: Materials.h).
+// that this .cu includes.
 // ======================================================================== //
 
-#include "bsdf.h"
-#include "deviceCode.h"
 #include <optix_device.h>
+
+#include "bsdf.h"
+#include "geometryData.h"
+#include "launchParams.h"
 
 using namespace owl;
 using namespace mypt;

@@ -1,5 +1,8 @@
 #include "Renderer.h"
 
+#include "geometryData.h"
+#include "launchParams.h"
+
 #include <cmath>
 #include <cstdint>
 #include <cstring>
