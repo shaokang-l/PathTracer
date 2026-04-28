@@ -1,9 +1,12 @@
 #pragma once
-#include "bxdf.h"
+#include "bxdfDispatch.h"
 #include "orthoBasis.h"
 
-// This BSDF is a wrapper for the BxDF class, it processes stuff from world space
-// converting to local space and calling the BxDF class.
+// World-space BSDF wrapper. Holds a shading frame + a pointer into the
+// global material buffer; on each call it does world->local conversion,
+// dispatches into the BxDF layer (see bxdfDispatch.h + bxdf/*.h), then
+// converts the sampled wi back to world space. f and pdf are space-
+// invariant and pass straight through.
 
 namespace mypt{
 
