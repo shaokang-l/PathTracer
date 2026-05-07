@@ -112,7 +112,7 @@ getRayColor(Ray &ray, const ObjectList &prims, gl::vec3 bg_color,
                                 scattered = true;
                                 prev_context.p = p;
                                 ray.origin = p;
-                                ray.direction = phase_rec.wi;
+                                ray.setDirection(phase_rec.wi);
                                 specular_bounce = false;
                                 any_non_specular = true;
                             }
@@ -252,8 +252,7 @@ getRayColor(Ray &ray, const ObjectList &prims, gl::vec3 bg_color,
             // update ray during surface interaction,avoid self - intersection
             ray.origin = hit_record.position +
                          hit_record.normal * epsilon * sign;
-            ray.direction =
-                srec.sampled_ray.direction;
+            ray.setDirection(srec.sampled_ray.direction);
 
             // update medium for transmission
             if (srec.is_transmission())

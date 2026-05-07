@@ -589,7 +589,7 @@ SceneInfo checkpoint_2()
     // objects.addObject(make_shared<ConstantMedium>(boundary, .0001f, vec3(1.f)));
 
     auto emat = make_shared<Lambertian>(
-        make_shared<ImageTexture>("../assets/textures/ao.png"));
+        make_shared<ImageTexture>("./assets/textures/ao.png"));
     objects.addObject(make_shared<Sphere>(vec3(400, 200, 400), 100, emat));
     auto pertext = make_shared<NoiseTexture>(100);
     objects.addObject(make_shared<Sphere>(vec3(220, 280, 300), 80,
@@ -747,7 +747,7 @@ SceneInfo custom_mesh()
     scene.global_medium = nullptr;
 
     std::shared_ptr<Hittable> mesh =
-        loadOBJMesh("../../assets/bunny_high.obj", DisneyBSDF::DisneyMaterial_Shell9, medium_interface);
+        loadOBJMesh("./assets/bunny_high.obj", DisneyBSDF::DisneyMaterial_Shell9, medium_interface);
     // mesh = make_shared<Rotate<Axis::X>>(mesh, M_PI_2);
     mesh = make_shared<Rotate<Axis::Y>>(mesh, M_PI_2);
     mesh = make_shared<Scale>(mesh, 2.8f);
@@ -802,7 +802,7 @@ SceneInfo fbx_mesh()
     ObjectList objects;
 
     std::shared_ptr<Hittable> mesh =
-        loadFBXMesh("../../assets/mccree.fbx", LAMBERTIAN_RED);
+        loadFBXMesh("./assets/mccree.fbx", LAMBERTIAN_RED);
     //   mesh = make_shared<Rotate<Axis::X>>(mesh, M_PI_2);
     //   mesh = make_shared<Rotate<Axis::Y>>(mesh, M_PI_2);
     mesh = make_shared<Scale>(mesh, 10.f);

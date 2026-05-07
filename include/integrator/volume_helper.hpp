@@ -198,7 +198,7 @@ inline gl::vec3 nee_light_sample(const gl::vec3 &wo_w, std::shared_ptr<MediumRec
             break;
 
         shadow_ray.origin = shadow_ray.at(shadow_hit_record.t);
-        shadow_ray.direction = (light_sample - shadow_ray.origin);
+        shadow_ray.setDirection(light_sample - shadow_ray.origin);
         update_medium_at_interface(shadow_ray, shadow_hit_record);
     }
 
@@ -242,7 +242,7 @@ inline gl::vec3 nee_estimate(const gl::vec3 &p_scatter,
     while (true)
     {
         shadow_ray.origin = p;
-        shadow_ray.direction = (p_prime - p).normalize();
+        shadow_ray.setDirection((p_prime - p).normalize());
         HitRecord shadow_hit_record;
         bool is_shadow_hit = false;
         is_shadow_hit = bvh ? bvh->intersect(shadow_ray, shadow_hit_record, 0.001f, (p_prime - p).length() - 0.001f)

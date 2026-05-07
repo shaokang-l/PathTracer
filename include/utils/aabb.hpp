@@ -20,11 +20,13 @@ public:
 
   bool intersect(const Ray &ray, float tmin, float tmax) const {
 
+    const auto& ray_origin = ray.getOrigin();
+    const auto& ray_inv_direction = ray.getInvDirection();
     // Ref: a faster method by Andrew Kensler at Pixar
     for (int i = 0; i < 3; i++) {
-      float inv_dir = 1.0f / ray.getDirection()[i];
-      float t0 = (min_xyz[i] - ray.getOrigin()[i]) * inv_dir;
-      float t1 = (max_xyz[i] - ray.getOrigin()[i]) * inv_dir;
+      float inv_dir = ray_inv_direction[i];
+      float t0 = (min_xyz[i] - ray_origin[i]) * inv_dir;
+      float t1 = (max_xyz[i] - ray_origin[i]) * inv_dir;
 
       // ensure t0 <= t1
       if (inv_dir < 0.0f)
