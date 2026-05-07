@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "light.h"
 #include "material.h"
 
 #include <cstdint>
@@ -41,6 +42,8 @@ struct LaunchParams {
 
   // Global material buffer, indexed by TriangleMeshSBT::materialId.
   MaterialGPU         *materials;
+  mypt::LightGPU      *lights;
+  int                  lightCount;
 
   int                  accumID;       // frames accumulated so far
   int                  samplesPerPixel;

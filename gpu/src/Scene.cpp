@@ -103,6 +103,16 @@ namespace mypt {
     pushBox(light, vec3f(-1.5f, 4.9f, -1.5f), vec3f(1.5f, 5.0f, 1.5f));
     s.meshes.push_back(std::move(light));
 
+    LightGPU quadLight;
+    quadLight.kind = LIGHT_QUAD;
+    quadLight.emission = emissive.emission;
+    quadLight.v0 = vec3f(-1.5f, 4.9f, -1.5f);
+    quadLight.edgeU = vec3f(3.f, 0.f, 0.f);
+    quadLight.edgeV = vec3f(0.f, 0.f, 3.f);
+    quadLight.normal = vec3f(0.f, -1.f, 0.f);
+    quadLight.area = 9.f;
+    s.lights.push_back(quadLight);
+
     s.computeBounds();
     return s;
   }

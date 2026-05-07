@@ -9,6 +9,7 @@
 #include <optix_device.h>
 
 #include "bsdf.h"
+#include "bxdfFlags.h"
 #include "geometryData.h"
 #include "launchParams.h"
 
@@ -123,6 +124,13 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
       // 01. BSDF Wrapper and ONB
       const OrthoBasis basis = makeOrthoBasis(prd.N);
       const BSDF bsdf(basis, &prd.material);
+
+
+      // Light sampling
+      if(isSpecular(prd.material.kind))
+      {
+        
+      }
 
       // 02. generate uc and u from RNG
       const float uc = rng();

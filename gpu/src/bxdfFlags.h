@@ -24,5 +24,6 @@ namespace mypt {
     __both__ inline bool isGlossy      (uint32_t f) { return f & GLOSSY; }
     __both__ inline bool isReflection(uint32_t f) { return f & REFLECTION; }
     __both__ inline bool isTransmission(uint32_t f) { return f & TRANSMISSION; }
+    __both__ inline bool hasNonDelta(uint32_t f) { return isDiffuse(f) || isGlossy(f); }
     
 } // namespace mypt

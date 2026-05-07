@@ -62,4 +62,15 @@ namespace mypt {
     }
   }
 
+  __device__ inline BxDFFlags flagsBxDF(const MaterialGPU &mat)
+  {
+    switch (mat.kind) {
+    case MATERIAL_LAMBERTIAN: return BxDFFlags::DIFFUSE_REFLECTION;
+    case MATERIAL_MIRROR:     return BxDFFlags::SPECULAR_REFLECTION;
+    case MATERIAL_DIELECTRIC: return BxDFFlags::SPECULAR_TRANSMISSION;
+    case MATERIAL_EMISSIVE:
+    default:                  return BxDFFlags::NONE;
+    }
+  }
+
 } // namespace mypt

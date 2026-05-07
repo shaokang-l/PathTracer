@@ -62,6 +62,8 @@ namespace mypt {
       { "fbPtr",          OWL_RAW_POINTER, OWL_OFFSETOF(LaunchParams, fbPtr)          },
       { "fbSize",         OWL_INT2,        OWL_OFFSETOF(LaunchParams, fbSize)         },
       { "materials",      OWL_RAW_POINTER, OWL_OFFSETOF(LaunchParams, materials)      },
+      { "lights",         OWL_RAW_POINTER, OWL_OFFSETOF(LaunchParams, lights)         },
+      { "lightCount",     OWL_INT,         OWL_OFFSETOF(LaunchParams, lightCount)     },
       { "accumID",        OWL_INT,         OWL_OFFSETOF(LaunchParams, accumID)        },
       { "samplesPerPixel",OWL_INT,         OWL_OFFSETOF(LaunchParams, samplesPerPixel)},
       { "maxBounces",     OWL_INT,         OWL_OFFSETOF(LaunchParams, maxBounces)     },
@@ -110,6 +112,13 @@ namespace mypt {
                                            scene.materials.size(),
                                            scene.materials.data());
     originalMaterials_ = scene.materials;
+
+    lightCount_ = int(scene.lights.size());
+    lightBuffer_ = lightCount_ > 0
+      ? owlDeviceBufferCreate(ctx_, OWL_USER_TYPE(LightGPU),
+                              scene.lights.size(),
+                              scene.lights.data())
+      : nullptr;
 
     buildAccel(scene);
 
@@ -193,6 +202,11 @@ namespace mypt {
       (uint64_t)(materialBuffer_
         ? owlBufferGetPointer(materialBuffer_, 0)
         : 0));
+    owlParamsSet1ul(lp_, "lights",
+      (uint64_t)(lightBuffer_
+        ? owlBufferGetPointer(lightBuffer_, 0)
+        : 0));
+    owlParamsSet1i (lp_, "lightCount", lightCount_);
     owlParamsSet1i (lp_, "accumID", accumID_);
     owlParamsSet1i (lp_, "samplesPerPixel", samplesPerPixel_);
     owlParamsSet1i (lp_, "maxBounces", maxBounces_);

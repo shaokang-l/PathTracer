@@ -3,6 +3,7 @@
 //
 // Prefer including the focused headers directly in new code:
 //   - material.h      -> MaterialKind / MaterialGPU
+//   - light.h         -> LightKind / LightGPU / LightSample
 //   - geometryData.h  -> geometry SBT records
 //   - launchParams.h  -> RayGenData / MissProgData / LaunchParams
 // ======================================================================== //

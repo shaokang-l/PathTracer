@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "light.h"
 #include "material.h"
 
 #include <owl/common/math/vec.h>
@@ -33,6 +34,7 @@ namespace mypt {
     std::vector<TriangleMesh> meshes;
     // global material buffer, use materialId to index into this buffer
     std::vector<MaterialGPU> materials;
+    std::vector<LightGPU>    lights;
 
     // Optional: world-space bounds, used to set a sensible camera speed.
     owl::box3f bounds;

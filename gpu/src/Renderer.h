@@ -90,6 +90,8 @@ namespace mypt {
 
     OWLBuffer        accumBuffer_   = nullptr;
     OWLBuffer        materialBuffer_ = nullptr;
+    OWLBuffer        lightBuffer_    = nullptr;
+    int              lightCount_     = 0;
 
     owl::vec2i       fbSize_        = { 0, 0 };
     uint32_t        *fbPtr_         = nullptr;

@@ -34,6 +34,14 @@ struct BSDF{
         vec3f wi_local = basis.toLocal(wi);
         return pdfBxDF(*mat, wo_local, wi_local);
     }
+
+    __device__ inline BxDFFlags flags() const {
+        return flagsBxDF(*mat);
+    }
+
+    __device__ inline bool hasNonDelta() const {
+        return mypt::hasNonDelta(flags());
+    }
 };
 
 } // namespace mypt
