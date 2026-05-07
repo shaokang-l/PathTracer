@@ -94,16 +94,28 @@ struct SceneInfo
       discovered_lights.addLight(environment_light);
     }
 
-#pragma omp parallel for
+
     {
-      for (int i = 0; i < _width; i++)
+      #pragma omp parallel for schedule(dynamic, 1)
+      for (int y = 0; y < _height; y++)
       {
 
-        if (show_progress)
-          std::cout << "Now scanning " << (float(counter) / _width) * 100.f
-                    << " %" << std::endl;
+        if (show_progress){
+          int localCounter;
+          #pragma omp atomic read
+          localCounter = counter;
 
-        for (int j = 0; j < _height; j++)
+          if (localCounter % 16 == 0) {
+              #pragma omp critical
+              {
+                  std::cout << "Progress: "
+                            << 100.0f * localCounter / _height
+                            << "%\n";
+              }
+        }
+        }
+
+        for (int x = 0; x < _width; x++)
         {
           auto color = vec3(0.0);
 
@@ -114,7 +126,7 @@ struct SceneInfo
             // per sample, reset sampler
             halton_sampler.startSample();
             auto sample_color = vec3(0.0);
-            vec2 uv = (vec2(i, j) + offsets[k]) / vec2(_width, _height);
+            vec2 uv = (vec2(x, y) + offsets[k]) / vec2(_width, _height);
             Ray ray = camera->generateRay(uv.u(), uv.v());
 
 #ifdef USE_ANALYTICAL_ILLUMIN
@@ -146,10 +158,11 @@ struct SceneInfo
           // average color
           {
             color /= fb.getSampleCount();
-            fb.setPixelColor(j, i, color);
+            fb.setPixelColor(x, y, color);
           }
         }
 
+        #pragma omp atomic update
         counter++;
       }
     }
