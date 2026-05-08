@@ -160,6 +160,7 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
 
     vec3f throughput = vec3f(1.f);
     vec3f radiance   = vec3f(0.f);
+    bool addEmission = true; // avoid double counting
 
     for (int depth = 0; depth < params.maxBounces; ++depth) {
       PRD prd;
@@ -168,7 +169,7 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
       RadianceRay ray(rayOrigin, rayDir, 1e-3f, 1e20f);
       owl::traceRay(params.world, ray, prd);
 
-      if (prd.isEmissive) {
+      if (prd.isEmissive&&(addEmission || !prd.didHit)) {
         radiance = radiance + throughput * prd.emission;
       }
       if (!prd.didHit) break;
@@ -213,6 +214,8 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
       BSDFSample sample;
       if (!bsdf.sample_f(wo, uc, u, sample)) break;
       if(sample.pdf <= 0.f) break;
+
+      addEmission = mypt::isSpecular(sample.flag);
 
       // 04. update throughput, lo = f*cos*Li/pdf
       const float cosTheta = fabsf(dot(sample.wi, prd.N));
