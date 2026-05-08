@@ -33,4 +33,6 @@ private:
 
   bool hitTriangle(int triIdx, const Ray &ray, float tmin, float tmax,
                    HitRecord &rec) const;
+  bool intersectNode(const Ray &ray, HitRecord &rec, float tmin, float tmax,
+                     bool test_box) const;
 };

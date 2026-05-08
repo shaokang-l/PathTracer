@@ -19,7 +19,11 @@ public:
   static AABB merge(AABB aabb1, AABB aabb2);
 
   bool intersect(const Ray &ray, float tmin, float tmax) const {
+    float t_enter;
+    return intersect(ray, tmin, tmax, t_enter);
+  };
 
+  bool intersect(const Ray &ray, float tmin, float tmax, float &t_enter) const {
     const auto& ray_origin = ray.getOrigin();
     const auto& ray_inv_direction = ray.getInvDirection();
     // Ref: a faster method by Andrew Kensler at Pixar
@@ -40,6 +44,7 @@ public:
         return false;
     }
 
+    t_enter = tmin;
     return true;
   };
 };

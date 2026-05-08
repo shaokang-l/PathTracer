@@ -56,7 +56,12 @@ MeshBVHNode::MeshBVHNode(const std::vector<gl::vec3> &verts,
 
 bool MeshBVHNode::intersect(const Ray &ray, HitRecord &rec, float tmin,
                             float tmax) const {
-  if (!box.intersect(ray, tmin, tmax))
+  return intersectNode(ray, rec, tmin, tmax, true);
+}
+
+bool MeshBVHNode::intersectNode(const Ray &ray, HitRecord &rec, float tmin,
+                                float tmax, bool test_box) const {
+  if (test_box && !box.intersect(ray, tmin, tmax))
     return false;
 
   bool hit = false;
@@ -71,11 +76,31 @@ bool MeshBVHNode::intersect(const Ray &ray, HitRecord &rec, float tmin,
       }
     }
   } else {
-    if (left && left->intersect(ray, rec, tmin, closest)) {
+    float left_t = 0.0f;
+    float right_t = 0.0f;
+    bool hit_left_box = left && left->box.intersect(ray, tmin, closest, left_t);
+    bool hit_right_box = right && right->box.intersect(ray, tmin, closest, right_t);
+
+    const MeshBVHNode *first = left.get();
+    const MeshBVHNode *second = right.get();
+    float second_t = right_t;
+    bool hit_first_box = hit_left_box;
+    bool hit_second_box = hit_right_box;
+
+    if (hit_right_box && (!hit_left_box || right_t < left_t)) {
+      first = right.get();
+      second = left.get();
+      second_t = left_t;
+      hit_first_box = hit_right_box;
+      hit_second_box = hit_left_box;
+    }
+
+    if (hit_first_box && first->intersectNode(ray, rec, tmin, closest, false)) {
       hit = true;
       closest = rec.t;
     }
-    if (right && right->intersect(ray, rec, tmin, closest)) {
+    if (hit_second_box && second_t <= closest &&
+        second->intersectNode(ray, rec, tmin, closest, false)) {
       hit = true;
     }
   }
