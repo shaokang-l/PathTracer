@@ -28,10 +28,14 @@ extern "C" __constant__ LaunchParams optixLaunchParams;
 // single traceRay call. We only carry what the closest-hit program
 // needs to write back.
 // ------------------------------------------------------------------
+// PRD lives in local memory and is read/written by CH/miss/raygen on every
+// trace. Keep it as small as possible: store a materialId index into the
+// global material buffer rather than a copy of the whole MaterialGPU,
+// which roughly halves PRD size and the corresponding L1 traffic.
 struct PRD {
   vec3f hitP;
   vec3f N;
-  MaterialGPU material;
+  int   materialId;
   bool  didHit;
   bool  isEmissive;
   vec3f emission;
@@ -69,7 +73,7 @@ OPTIX_CLOSEST_HIT_PROGRAM(TriangleMesh)()
   const float tHit = optixGetRayTmax();
   prd.hitP       = (vec3f)optixGetWorldRayOrigin() + tHit * rayDir;
   prd.N          = N;
-  prd.material   = material;
+  prd.materialId = self.materialId;
   prd.didHit     = true;
   prd.isEmissive = (material.kind == MATERIAL_EMISSIVE);
   prd.emission   = material.emission;
@@ -176,7 +180,8 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
 
       // 01. BSDF Wrapper and ONB
       const OrthoBasis basis = makeOrthoBasis(prd.N);
-      const BSDF bsdf(basis, &prd.material);
+      const MaterialGPU &material = params.materials[prd.materialId];
+      const BSDF bsdf(basis, &material);
       const vec3f wo = -rayDir;
 
       if (bsdf.hasNonDelta())

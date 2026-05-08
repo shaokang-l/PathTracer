@@ -7,11 +7,29 @@
 #include "Scene.h"
 #include "Viewer.h"
 
+#include <cstdlib>
 #include <iostream>
+#include <string_view>
 
-int main(int /*argc*/, char ** /*argv*/)
+namespace {
+  // Parse `--frames N` from argv. Returns -1 when not specified, meaning
+  // "run interactively forever". Used by profilers (nsys/ncu) to make the
+  // app self-terminate after a deterministic number of accumulated frames.
+  int parseFramesArg(int argc, char **argv) {
+    for (int i = 1; i + 1 < argc; ++i) {
+      if (std::string_view(argv[i]) == "--frames") {
+        return std::atoi(argv[i + 1]);
+      }
+    }
+    return -1;
+  }
+}
+
+int main(int argc, char **argv)
 {
   std::cout << "[mypt] starting up" << std::endl;
+
+  const int maxFrames = parseFramesArg(argc, argv);
 
   mypt::Scene scene = mypt::Scene::makeTestScene();
   std::cout << "[mypt] scene: " << scene.meshes.size()
@@ -27,7 +45,14 @@ int main(int /*argc*/, char ** /*argv*/)
   mypt::Viewer viewer(renderer, scene.bounds);
   viewer.enableFlyMode();
   viewer.enableInspectMode(owl::box3f(scene.bounds.lower, scene.bounds.upper));
-  viewer.showAndRun();
+
+  if (maxFrames > 0) {
+    std::cout << "[mypt] benchmark mode: exiting after "
+              << maxFrames << " frames" << std::endl;
+    viewer.showAndRun([&] { return renderer.accumID() < maxFrames; });
+  } else {
+    viewer.showAndRun();
+  }
 
   return 0;
 }

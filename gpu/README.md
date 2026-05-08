@@ -1,30 +1,33 @@
-# my-pt — interactive OWL path-tracing scaffold
+# GPU Backend - OWL/OptiX Path Tracer
 
-A minimal, OOP-friendly starting point for porting a CPU path tracer
-to OWL/OptiX. Everything is split into clear layers so you can drop
-your own abstractions on top without fighting a monolithic sample.
+This directory contains the experimental GPU backend for the path tracer. It is
+an OWL/OptiX renderer designed to port the CPU path tracer incrementally while
+keeping the architecture readable: OptiX handles traversal and shader binding,
+raygen owns the integrator loop, and material polymorphism is represented as
+POD data plus device-side dispatch.
 
 ## What's in here
 
-```
-my-pt/
+```text
+gpu/
 ├── CMakeLists.txt
-├── README.md          (this file)
+├── README.md
 └── src/
-    ├── main.cpp        thin entry point
-    ├── Viewer.{h,cpp}  GLFW window + camera controls (owl_viewer subclass)
-    ├── Renderer.{h,cpp} owns ALL OWL handles (context, module, raygen,
-    │                    launch params, groups). Only this file talks to
-    │                    the OWL C API.
-    ├── Scene.{h,cpp}    pure host-side POD scene (vector<TriangleMesh>).
-    │                    This is where you plug your existing OOP scene.
-    ├── deviceCode.h     shared host<->device structs (LaunchParams,
-    │                    TriangleMeshSBT, MaterialGPU, ...). Included
-    │                    from both host .cpp and device .cu.
-    ├── deviceCode.cu    the ONE file compiled to PTX. Contains only
-    │                    the OptiX raygen / closest-hit / miss programs.
-    └── Materials.h      device-only BSDF sampling helpers. This is the
-                         file you'll grow the most during porting.
+    ├── main.cpp          thin entry point; supports `--frames N` for profiling
+    ├── Viewer.{h,cpp}    GLFW window + camera controls
+    ├── Renderer.{h,cpp}  owns OWL context, module, programs, groups, SBT,
+    │                     launch params, material/light buffers, and timing
+    ├── Scene.{h,cpp}     host-side POD scene: meshes, materials, lights
+    ├── deviceCode.cu     OptiX raygen / closest-hit / miss programs
+    ├── deviceCode.h      compatibility umbrella for shared POD headers
+    ├── geometryData.h    geometry SBT records, currently TriangleMeshSBT
+    ├── launchParams.h    RayGenData, MissProgData, LaunchParams
+    ├── material.h        MaterialKind and MaterialGPU
+    ├── light.h           LightKind, LightGPU, and light sampling helpers
+    ├── rayTypes.h        radiance and shadow ray type declarations
+    ├── bsdf.h            world-space BSDF wrapper
+    ├── bxdfDispatch.h    tagged-union dispatch over MaterialGPU.kind
+    └── bxdf/             per-BxDF implementations
 ```
 
 ## Architecture at a glance
@@ -43,9 +46,10 @@ my-pt/
                  +-----------------------+
                             |
                  device-side programs (deviceCode.cu)
-                 - TriangleMesh CH
+                 - radiance TriangleMesh CH
+                 - shadow TriangleMesh CH
                  - path-tracing raygen
-                 - env-light miss
+                 - environment / shadow miss
 ```
 
 Key design choices:
@@ -56,136 +60,112 @@ Key design choices:
 - **Launch parameters, not SBT rebuilds, for per-frame data.** Camera
   pose, frame index, spp, bounces all live in `LaunchParams` — the
   main path for interactive/progressive rendering in OptiX.
-- **One `OWL_TRIANGLES` geom type with `MaterialGPU` as a per-geom SBT
-  variable.** This is the simplest starting point; split into multiple
-  geom types per material family only when it hurts (e.g. when you
-  want per-material closest-hits, specialised attribute generation).
+- **Thin closest-hit, raygen-side shading.** The radiance closest-hit
+  program reconstructs `hitP`, the geometric normal, and `materialId`.
+  The raygen program fetches `MaterialGPU`, builds the BSDF wrapper, and
+  owns throughput, emission, direct lighting, Russian roulette, and next-ray
+  spawning.
+- **SBT as scene binding metadata.** The per-geometry SBT record stores
+  vertex/index buffers and `materialId`. Materials and lights live in global
+  device buffers referenced by launch params, so their contents can be updated
+  without rebuilding the SBT.
+- **GPU-friendly material polymorphism.** CPU virtual `Material::scatter()`
+  dispatch is represented as `MaterialGPU.kind` plus switches in
+  `bxdfDispatch.h`. This keeps material math in small device functions rather
+  than spreading integrator logic across many closest-hit programs.
+- **Two ray types.** Radiance rays use the main closest-hit/miss programs.
+  Shadow rays use a minimal closest-hit and miss pair for binary visibility
+  queries during direct-light sampling.
 - **Progressive accumulator in float4 HDR + tone-map + gamma in the
   raygen.** Accumulator resets on any camera change.
+- **Built-in profiling hooks.** `Renderer` records CUDA event timings and
+  prints smoothed frame time / primary-ray throughput periodically. `main`
+  supports `--frames N` for Nsight Compute / Systems runs.
 
-## Building (inside the OWL repo — quick test)
+## Building
 
-1. Add one line to `c:/Users/lshk7/owl/CMakeLists.txt` near the bottom
-   (e.g. after the `samples` block) — only if you want to build it in
-   the main OWL solution:
-
-   ```cmake
-   add_subdirectory(my-pt)
-   ```
-
-2. Re-configure and build (from Cursor: *CMake: Configure* then *Build*).
-   The target name is `mypt`. It will open a window showing a tiny
-   test Cornell-box-style scene with one mirror, one light, and two
-   diffuse walls.
-
-## Building (integrated into YOUR CPU path tracer project)
-
-This is the path you probably want.
-
-### 1. Folder layout
-
-Inside your path-tracer project:
-
-```
-<your-pt-repo>/
-├── CMakeLists.txt
-├── third_party/
-│   └── owl/          <-- OWL, e.g. as a git submodule of NVIDIA/OWL
-├── gpu/              <-- rename 'my-pt/' to whatever fits your repo
-│   ├── CMakeLists.txt
-│   └── src/ ...
-└── ... your existing CPU code ...
-```
-
-### 2. Copy only this one folder
-
-Copy the **entire** `my-pt/` directory (the one this README lives in)
-into your project. Rename it to `gpu/` or whatever you prefer. You do
-**not** need to copy anything else from the OWL repo — OWL itself
-comes in via `add_subdirectory` on the submodule.
-
-### 3. Add OWL as a submodule
+The top-level CMake project builds the CPU backend by default. Enable this
+backend with `PATHTRACER_BUILD_GPU=ON`:
 
 ```bash
-cd <your-pt-repo>
-git submodule add https://github.com/NVIDIA/OWL.git third_party/owl
 git submodule update --init --recursive
+cmake -S . -B build -DPATHTRACER_BUILD_GPU=ON
+cmake --build build --target mypt --config Release
 ```
 
-### 4. Wire it up in your top-level `CMakeLists.txt`
-
-Add near the top (before you define your own targets):
+The root `CMakeLists.txt` defaults CUDA architecture to Ada / RTX 40-series
+(`89`) when the GPU backend is enabled and no architecture is provided:
 
 ```cmake
-# --- OWL + my-pt ---
-add_subdirectory(third_party/owl EXCLUDE_FROM_ALL)
-add_subdirectory(gpu)  # or whatever you called the copied my-pt/
+set(CMAKE_CUDA_ARCHITECTURES 89 CACHE STRING "CUDA arch list")
 ```
 
-`EXCLUDE_FROM_ALL` prevents OWL's sample binaries from being built by
-default — you'll still get the `owl::owl` and `owl_viewer` targets you
-need.
+Run interactively:
 
-### 5. Pass CUDA architecture
-
-In your root CMakeLists.txt (or via the `-D` flag), set your GPU:
-
-```cmake
-set(CMAKE_CUDA_ARCHITECTURES 89 CACHE STRING "")  # 89 = RTX 40xx (Ada)
+```bash
+./build/gpu/mypt
 ```
 
-### 6. Build and run
+Run a fixed number of frames for profiling:
 
-The target `mypt` should now appear in your build. Once it runs and
-opens the window, you're ready to start porting.
+```bash
+./build/gpu/mypt --frames 300
+```
 
-## Porting notes (next step)
+## Current GPU Pipeline
 
-When you come back with your OOP CPU path tracer, here's the order I'd
-tackle things in — each step is small enough to ask a follow-up chat
-about in isolation:
+```text
+raygen
+  generate camera ray
+  trace RadianceRay
+    -> TriangleMesh CH fills PRD(hitP, N, materialId, emission)
+    -> miss returns sky emission
+  if hit:
+    fetch MaterialGPU by materialId
+    build BSDF frame
+    sample one quad light if the BSDF has a non-delta component
+    trace ShadowRay for visibility
+    sample BSDF for the next bounce
+    update throughput and Russian roulette
+```
 
-1. **Materials** — write a translator in `Scene.cpp` that converts
-   your polymorphic `Material*` (or whatever base class) into
-   `MaterialGPU`. Extend the tagged union in `deviceCode.h` and the
-   `sampleBSDF` switch in `Materials.h` to match your BRDFs. When the
-   switch gets too big, split into multiple `OWLGeomType`s — one per
-   material family — each with its own closest-hit. The renderer
-   already supports that; just add another `OWLGeomType`/closest-hit
-   pair and route meshes to it based on material.
-2. **Geometry** — implement your `Mesh*` → `mypt::TriangleMesh`
-   conversion in one place (e.g. a free `meshToOwl(...)` function or
-   a visitor). Keep transforms out of the mesh: use OWL instances
-   (`owlInstanceGroupCreate`) for that — it's how you get multi-level
-   instancing for free.
-3. **Lights** — add a `std::vector<LightGPU>` to `Scene`, upload it as
-   an `OWLBuffer`, add `OWL_BUFPTR` field + count to `LaunchParams`,
-   then do next-event estimation inside the raygen loop (or in a
-   helper called from closest-hit).
-4. **Camera** — `Viewer::cameraChanged()` currently forwards to
-   `Renderer::setCamera` with a pinhole model. To add DoF, bokeh,
-   orthographic, equirect, etc., extend `LaunchParams::camera` and
-   the ray-generation code in `deviceCode.cu::rayGen`. Your host-side
-   `Camera` class can stay exactly as it is; just translate it to
-   `setCamera(...)`.
-5. **Sampler** — replace `owl::common::LCG` with your own sampler.
-   Pass per-pixel seeds via `LaunchParams`.
-6. **Integrators** — if you want path/BDPT/etc. as separate
-   integrators, either (a) add a switch in raygen driven by a
-   launch-param enum, or (b) create a separate `OWLRayGen` per
-   integrator and let `Renderer` pick which one to launch.
-7. **Denoiser** — not in OWL. See the main OWL README's FAQ / the
-   OptiX SDK `optixDenoiser` sample. Plugs in cleanly after step 6
-   because `Renderer` already owns an HDR float4 accumulator that's
-   ideal denoiser input.
+This is intentionally close to the CPU path tracer's mental model:
+
+```text
+CPU: object hit -> Material::scatter() virtual dispatch
+GPU: OptiX hit  -> MaterialGPU.kind switch dispatch
+```
+
+## Porting Notes
+
+Near-term work should keep the current separation of concerns:
+
+1. **Materials** - grow `MaterialGPU` and `bxdf/` one material family at a
+   time. Keep per-BxDF math in device helpers and let raygen own the
+   integrator loop.
+2. **Direct lighting** - the first quad-light sampler and shadow ray path are
+   in place. The next step is making the estimator robust enough for multiple
+   lights and adding MIS with the BSDF pdf.
+3. **Geometry** - keep host scene conversion in `Scene.cpp` / `Renderer.cpp`.
+   If a single CPU mesh contains multiple materials, split it into multiple
+   `TriangleMesh` records or add per-primitive material indexing later.
+4. **Profiling** - use Nsight data before changing architecture. Per-material
+   closest-hit programs can remove a material switch, but they also spread
+   shading logic across shader entry points. Wavefront scheduling is a larger
+   step and should wait until material/light coverage is stable.
 
 ## Known limitations of the scaffold (on purpose)
 
-- Single ray type (no shadow rays / NEE yet).
-- Single closest-hit program; material dispatch is via a switch.
-- No textures / normal maps.
+- Single geometry type and one radiance closest-hit program; material dispatch
+  is still via `MaterialGPU.kind`.
+- Direct lighting is present but still simple: one flat `LightGPU` buffer,
+  quad-light sampling, binary shadow visibility, no MIS yet.
+- Dielectric BxDF is still a stub on the GPU.
+- No textures, normal maps, alpha masks, or per-primitive material ids yet.
 - No motion blur, no instancing (one BLAS containing everything).
-- No denoiser (would be additive, see step 7 above).
+- No volumes or participating media on the GPU.
+- No wavefront scheduler.
+- No denoiser yet.
 
-All of these are easy follow-ups once the basic pipeline is running
-on your scene.
+All of these are expected follow-ups; the current focus is keeping the GPU
+backend small enough to reason about while it catches up to CPU features.

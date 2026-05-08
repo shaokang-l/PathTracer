@@ -2,3 +2,5 @@
 /build/
 *.png
 .vscode/
+*.ncu-rep
+*.nsys-rep

@@ -80,6 +80,12 @@ namespace mypt {
     OWLMissProg      shadowMissProg_ = nullptr;
     OWLLaunchParams  lp_            = nullptr;
 
+    // profiling variables
+    cudaEvent_t eventStart_  = nullptr;
+    cudaEvent_t eventEnd_    = nullptr;
+    float       emaMs_       = 0.f;   // exponentially-smoothed launch time (ms)
+    int         frameCount_  = 0;     // total render() calls; used for periodic logging
+
     std::vector<OWLBuffer> vertexBufs_;
     std::vector<OWLBuffer> indexBufs_;
     std::vector<OWLGeom>   geoms_;

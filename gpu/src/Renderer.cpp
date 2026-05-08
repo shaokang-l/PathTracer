@@ -10,6 +10,8 @@
 #include <cstring>
 #include <iostream>
 
+#include <cuda_runtime.h>
+
 extern "C" char deviceCode_ptx[];
 
 namespace mypt {
@@ -24,11 +26,16 @@ namespace mypt {
     owlContextSetRayTypeCount(ctx_, RAY_TYPE_COUNT);
     module_ = owlModuleCreate(ctx_, deviceCode_ptx);
     buildPrograms();
+
+    cudaEventCreate(&eventStart_);
+    cudaEventCreate(&eventEnd_);
   }
 
   Renderer::~Renderer()
   {
     if (ctx_) owlContextDestroy(ctx_);
+    if (eventStart_) cudaEventDestroy(eventStart_);
+    if (eventEnd_) cudaEventDestroy(eventEnd_);
   }
 
   void Renderer::buildPrograms()
@@ -233,7 +240,29 @@ namespace mypt {
       return;
 
     updateLaunchParams();
+
+    cudaEventRecord(eventStart_, /*stream=*/0);
     owlLaunch2D(rayGen_, fbSize_.x, fbSize_.y, lp_);
+    cudaEventRecord(eventEnd_,   /*stream=*/0);
+    cudaEventSynchronize(eventEnd_);
+
+    float ms = 0.f;
+    cudaEventElapsedTime(&ms, eventStart_, eventEnd_);
+    // EMA smoothing: 0.9 history, 0.1 current. Bootstraps from the first sample.
+    emaMs_ = (emaMs_ == 0.f) ? ms : (0.9f * emaMs_ + 0.1f * ms);
+
+    if (++frameCount_ % 60 == 0) {
+      const double pixels       = double(fbSize_.x) * double(fbSize_.y);
+      const double samples      = pixels * double(samplesPerPixel_);
+      // Counts only primary rays; real ray budget includes shadow + indirect bounces.
+      const double mPrimaryRaysPerSec = samples / (double(emaMs_) * 1e3);
+      std::cout << "[profile] " << emaMs_ << " ms/frame"
+                << "  (" << mPrimaryRaysPerSec << " M primary rays/s, "
+                << samplesPerPixel_ << " spp, "
+                << fbSize_.x << "x" << fbSize_.y << ")"
+                << std::endl;
+    }
+
     ++accumID_;
   }
 
