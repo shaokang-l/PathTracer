@@ -12,6 +12,7 @@
 #include "bxdfFlags.h"
 #include "geometryData.h"
 #include "launchParams.h"
+#include "rayTypes.h"
 
 using namespace owl;
 using namespace mypt;
@@ -37,6 +38,14 @@ struct PRD {
 };
 
 // ------------------------------------------------------------------
+// Shadow PRD
+// Carries a vec3f visibility value, which is 0 if the light is not visible, and 1 if it is.
+// ------------------------------------------------------------------
+struct ShadowPRD {
+  vec3f transmittance;
+};
+// ---------------
+// ---------------------------------------------------
 // Closest-hit: fill the PRD. All shading / next-event logic lives in
 // the raygen loop.
 // ------------------------------------------------------------------
@@ -66,6 +75,13 @@ OPTIX_CLOSEST_HIT_PROGRAM(TriangleMesh)()
   prd.emission   = material.emission;
 }
 
+// initial version, binary shadow ray visibility check.
+OPTIX_CLOSEST_HIT_PROGRAM(TriangleMeshShadow)()
+{
+  ShadowPRD &prd = owl::getPRD<ShadowPRD>();
+  prd.transmittance = vec3f(0.f);
+}
+
 // ------------------------------------------------------------------
 // Miss: environment light. Simple vertical gradient for now.
 // ------------------------------------------------------------------
@@ -81,6 +97,42 @@ OPTIX_MISS_PROGRAM(miss)()
   prd.didHit     = false;
   prd.isEmissive = true;
   prd.emission   = sky;
+}
+
+OPTIX_MISS_PROGRAM(missShadow)()
+{
+  ShadowPRD &prd = owl::getPRD<ShadowPRD>();
+  prd.transmittance = vec3f(1.f);
+}
+
+// ------------------------------------------------------------------
+// traceVisibility: shoot a ShadowRay from `p` toward `target` and
+// return the accumulated transmittance written by the shadow CH/miss
+// programs. Returning vec3f (instead of a bool) leaves room for
+// colored / partial transmission later.
+// ------------------------------------------------------------------
+__device__ inline vec3f traceVisibility(OptixTraversableHandle world,
+                                        const vec3f &p,
+                                        const vec3f &target)
+{
+  const vec3f toTarget = target - p;
+  const float dist2    = dot(toTarget, toTarget);
+  if (dist2 <= 1e-7f) return vec3f(0.f);
+
+  const float dist = sqrtf(dist2);
+  const vec3f dir  = toTarget * (1.f / dist);
+
+  ShadowPRD prd;
+  prd.transmittance = vec3f(1.f);
+
+  ShadowRay ray(p, dir, 1e-3f, dist - 1e-3f);
+  owl::traceRay(world,
+                ray,
+                prd,
+                OPTIX_RAY_FLAG_DISABLE_ANYHIT
+              | OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT);
+
+  return prd.transmittance;
 }
 
 // ------------------------------------------------------------------
@@ -113,7 +165,7 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
       PRD prd;
       prd.didHit = false;
 
-      owl::Ray ray(rayOrigin, rayDir, 1e-3f, 1e20f);
+      RadianceRay ray(rayOrigin, rayDir, 1e-3f, 1e20f);
       owl::traceRay(params.world, ray, prd);
 
       if (prd.isEmissive) {
@@ -124,12 +176,33 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
       // 01. BSDF Wrapper and ONB
       const OrthoBasis basis = makeOrthoBasis(prd.N);
       const BSDF bsdf(basis, &prd.material);
+      const vec3f wo = -rayDir;
 
-
-      // Light sampling
-      if(isSpecular(prd.material.kind))
+      if (bsdf.hasNonDelta())
       {
-        
+        LightSample lightSample;
+        if (sampleLight(params.lights, params.lightCount, rng(), vec2f(rng(), rng()), lightSample))
+        {
+          vec3f toLight = lightSample.p - prd.hitP;
+          float dist2 = dot(toLight, toLight);
+
+          if (dist2 > 1e-7f && lightSample.pdfA > 0.f) {
+            float dist = sqrtf(dist2);
+            vec3f wi = toLight * (1.f / dist);
+
+            float NoI = fmaxf(dot(prd.N, wi), 0.f);
+            float NoL = fmaxf(dot(lightSample.n, -wi), 0.f);
+
+            if (NoI > 0.f && NoL > 0.f) {
+              const vec3f V = traceVisibility(params.world, prd.hitP, lightSample.p);
+              if (V.x > 0.f || V.y > 0.f || V.z > 0.f) {
+                const vec3f f = bsdf.f(wo, wi);
+                const float G = NoI * NoL / dist2;
+                radiance += throughput * lightSample.Le * f * V * G / lightSample.pdfA;
+              }
+            }
+          }
+        }
       }
 
       // 02. generate uc and u from RNG
@@ -138,7 +211,6 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
 
       // 03. sample BSDF
       BSDFSample sample;
-      const vec3f wo = -rayDir;
       if (!bsdf.sample_f(wo, uc, u, sample)) break;
       if(sample.pdf <= 0.f) break;
 

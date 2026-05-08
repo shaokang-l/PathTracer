@@ -77,6 +77,7 @@ namespace mypt {
     OWLGeomType      triMeshType_   = nullptr;
     OWLRayGen        rayGen_        = nullptr;
     OWLMissProg      missProg_      = nullptr;
+    OWLMissProg      shadowMissProg_ = nullptr;
     OWLLaunchParams  lp_            = nullptr;
 
     std::vector<OWLBuffer> vertexBufs_;

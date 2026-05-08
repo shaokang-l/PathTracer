@@ -2,6 +2,8 @@
 
 #include "geometryData.h"
 #include "launchParams.h"
+#include "owl/owl_host.h"
+#include "rayTypes.h"
 
 #include <cmath>
 #include <cstdint>
@@ -19,6 +21,7 @@ namespace mypt {
   Renderer::Renderer()
   {
     ctx_    = owlContextCreate(nullptr, 1);
+    owlContextSetRayTypeCount(ctx_, RAY_TYPE_COUNT);
     module_ = owlModuleCreate(ctx_, deviceCode_ptx);
     buildPrograms();
   }
@@ -40,8 +43,8 @@ namespace mypt {
                                      OWL_TRIANGLES,
                                      sizeof(TriangleMeshSBT),
                                      triMeshVars, -1);
-    owlGeomTypeSetClosestHit(triMeshType_, 0, module_, "TriangleMesh");
-
+    owlGeomTypeSetClosestHit(triMeshType_, RayType::RADIANCE_RAY_TYPE, module_, "TriangleMesh");
+    owlGeomTypeSetClosestHit(triMeshType_, RayType::SHADOW_RAY_TYPE, module_, "TriangleMeshShadow");
     OWLVarDecl missVars[] = {
       { "skyColorTop",    OWL_FLOAT3, OWL_OFFSETOF(MissProgData, skyColorTop)    },
       { "skyColorBottom", OWL_FLOAT3, OWL_OFFSETOF(MissProgData, skyColorBottom) },
@@ -50,6 +53,14 @@ namespace mypt {
     missProg_ = owlMissProgCreate(ctx_, module_, "miss",
                                   sizeof(MissProgData),
                                   missVars, -1);
+
+    shadowMissProg_ = owlMissProgCreate(ctx_, module_, 
+      "missShadow",0,nullptr,0);
+
+    // Explicitly set miss programs for each ray type.
+    owlMissProgSet(ctx_, RayType::RADIANCE_RAY_TYPE, missProg_);
+    owlMissProgSet(ctx_, RayType::SHADOW_RAY_TYPE, shadowMissProg_);
+
     owlMissProgSet3f(missProg_, "skyColorTop",    owl3f{ 0.55f, 0.75f, 1.0f });
     owlMissProgSet3f(missProg_, "skyColorBottom", owl3f{ 1.00f, 1.00f, 1.0f });
 

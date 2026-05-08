@@ -13,3 +13,4 @@
 #include "geometryData.h"
 #include "launchParams.h"
 #include "material.h"
+#include "rayTypes.h"
