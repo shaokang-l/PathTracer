@@ -5,6 +5,16 @@
 #include <algorithm>
 #include <cstdlib>
 
+struct LinearMeshBVHNode {
+  AABB box;
+  int left = -1;
+  int right = -1;
+  int first_tri = -1;
+  int tri_count = 0;
+
+  bool isLeaf() const { return tri_count > 0; }
+};
+
 class MeshBVHNode : public Hittable {
 public:
   MeshBVHNode(const std::vector<gl::vec3> &verts,
@@ -19,6 +29,9 @@ public:
                  float tmax) const override;
 
   AABB getAABB(float t0, float t1) override { return box; }
+
+  int flatten(std::vector<LinearMeshBVHNode> &nodes,
+              std::vector<int> &tri_indices) const;
 
 private:
   AABB box;

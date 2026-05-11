@@ -59,6 +59,25 @@ bool MeshBVHNode::intersect(const Ray &ray, HitRecord &rec, float tmin,
   return intersectNode(ray, rec, tmin, tmax, true);
 }
 
+int MeshBVHNode::flatten(std::vector<LinearMeshBVHNode> &nodes,
+                         std::vector<int> &tri_indices) const {
+  int node_index = static_cast<int>(nodes.size());
+  nodes.emplace_back();
+
+  nodes[node_index].box = box;
+
+  if (!left && !right) {
+    nodes[node_index].first_tri = static_cast<int>(tri_indices.size());
+    nodes[node_index].tri_count = static_cast<int>(tri_ids.size());
+    tri_indices.insert(tri_indices.end(), tri_ids.begin(), tri_ids.end());
+  } else {
+    nodes[node_index].left = left ? left->flatten(nodes, tri_indices) : -1;
+    nodes[node_index].right = right ? right->flatten(nodes, tri_indices) : -1;
+  }
+
+  return node_index;
+}
+
 bool MeshBVHNode::intersectNode(const Ray &ray, HitRecord &rec, float tmin,
                                 float tmax, bool test_box) const {
   if (test_box && !box.intersect(ray, tmin, tmax))

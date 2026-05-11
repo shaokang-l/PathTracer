@@ -1,4 +1,5 @@
 #pragma once
+#include "feature_flags.hpp"
 #include "header.hpp"
 #include "utils/matrix.hpp"
 
@@ -11,7 +12,7 @@
 #define WIDTH 500
 #define HEIGHT 500
 #define BG_COLOR gl::vec3(0.0f, 0.0f, 0.0f)
-#define useBVH false
+#define useBVH false // TLAS enable
 // NOT IMPLEMENTED YET: // #define USE_MAXDEPTH_MIS
 #define USE_MAXDEPTH_NEE
 // #define USE_MAXDEPTH_NAIVE

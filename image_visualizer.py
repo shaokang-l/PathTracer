@@ -340,8 +340,8 @@ def plot_2d_distributions(gaussian_image):
 # Example usage
 def main():
     print(compute_mse("./ap.png","./gt.png"))
-    print(compute_mse("./cos.png","./gt.png"))
-    print(compute_mse("./uniform.png","./gt.png"))
+    # print(compute_mse("./cos.png","./gt.png"))
+    # print(compute_mse("./uniform.png","./gt.png"))
     # if os.path.exists('./part-1.png'):
     #     plot_image_difference('./ref_blank/hw7_1.png', './part-1.png')
     # if os.path.exists('./part-2.png'):
