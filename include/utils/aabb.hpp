@@ -24,25 +24,36 @@ public:
   };
 
   bool intersect(const Ray &ray, float tmin, float tmax, float &t_enter) const {
-    const auto& ray_origin = ray.getOrigin();
-    const auto& ray_inv_direction = ray.getInvDirection();
-    // Ref: a faster method by Andrew Kensler at Pixar
-    for (int i = 0; i < 3; i++) {
-      float inv_dir = ray_inv_direction[i];
-      float t0 = (min_xyz[i] - ray_origin[i]) * inv_dir;
-      float t1 = (max_xyz[i] - ray_origin[i]) * inv_dir;
+    const auto &ray_origin = ray.getOrigin();
+    const auto &ray_inv_direction = ray.getInvDirection();
 
-      // ensure t0 <= t1
-      if (inv_dir < 0.0f)
-        std::swap(t0, t1);
+    // Ref: a faster method by Andrew Kensler at Pixar, unrolled for this hot path.
+    float tx0 = (min_xyz.x() - ray_origin.x()) * ray_inv_direction.x();
+    float tx1 = (max_xyz.x() - ray_origin.x()) * ray_inv_direction.x();
+    if (ray_inv_direction.x() < 0.0f)
+      std::swap(tx0, tx1);
+    tmin = tx0 > tmin ? tx0 : tmin;
+    tmax = tx1 < tmax ? tx1 : tmax;
+    if (tmax <= tmin)
+      return false;
 
-      // find the intersection of 3 axis
-      tmin = t0 > tmin ? t0 : tmin;
-      tmax = t1 < tmax ? t1 : tmax;
+    float ty0 = (min_xyz.y() - ray_origin.y()) * ray_inv_direction.y();
+    float ty1 = (max_xyz.y() - ray_origin.y()) * ray_inv_direction.y();
+    if (ray_inv_direction.y() < 0.0f)
+      std::swap(ty0, ty1);
+    tmin = ty0 > tmin ? ty0 : tmin;
+    tmax = ty1 < tmax ? ty1 : tmax;
+    if (tmax <= tmin)
+      return false;
 
-      if (tmax <= tmin)
-        return false;
-    }
+    float tz0 = (min_xyz.z() - ray_origin.z()) * ray_inv_direction.z();
+    float tz1 = (max_xyz.z() - ray_origin.z()) * ray_inv_direction.z();
+    if (ray_inv_direction.z() < 0.0f)
+      std::swap(tz0, tz1);
+    tmin = tz0 > tmin ? tz0 : tmin;
+    tmax = tz1 < tmax ? tz1 : tmax;
+    if (tmax <= tmin)
+      return false;
 
     t_enter = tmin;
     return true;
