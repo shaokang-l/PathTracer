@@ -1,4 +1,5 @@
 #include "Scene.h"
+#include "pt/scene/mitsuba_xml.h"
 
 #include <algorithm>
 #include <cctype>
@@ -211,6 +212,61 @@ namespace {
     m.clearcoat = floatProp(body, "clearcoat", 0.f);
     m.clearcoatGloss = floatProp(body, "clearcoatGloss", 0.f);
     m.ior = floatProp(body, "eta", 1.5f);
+    return m;
+  }
+
+  static owl::vec3f toOwl(const pt::Vec3f &v)
+  {
+    return owl::vec3f(v.x, v.y, v.z);
+  }
+
+  static MaterialGPU makeMaterialXml(const pt::SceneMaterialDesc &desc)
+  {
+    MaterialGPU m = {};
+    switch (desc.kind) {
+    case pt::SceneMaterialKind::Diffuse:
+      m.kind = MATERIAL_LAMBERTIAN;
+      m.albedo = toOwl(desc.reflectance);
+      break;
+    case pt::SceneMaterialKind::Conductor:
+      m.kind = MATERIAL_CONDUCTOR;
+      m.eta = toOwl(desc.eta);
+      m.k = toOwl(desc.k);
+      m.alpha_x = desc.alpha;
+      m.alpha_y = desc.alpha;
+      m.albedo = desc.reflectance.x > 0.f || desc.reflectance.y > 0.f || desc.reflectance.z > 0.f
+        ? toOwl(desc.reflectance)
+        : owl::vec3f(0.8f);
+      break;
+    case pt::SceneMaterialKind::Dielectric:
+      m.kind = MATERIAL_DIELECTRIC;
+      m.ior = desc.ior;
+      m.alpha_x = desc.alpha;
+      m.alpha_y = desc.alpha;
+      m.albedo = owl::vec3f(1.f);
+      break;
+    case pt::SceneMaterialKind::DisneyPrincipled:
+      m.kind = MATERIAL_DISNEY_PRINCIPLED;
+      m.baseColor = toOwl(desc.baseColor);
+      m.albedo = m.baseColor;
+      m.specularTransmission = desc.specularTransmission;
+      m.metallic = desc.metallic;
+      m.subsurface = desc.subsurface;
+      m.specular = desc.specular;
+      m.roughness = desc.roughness;
+      m.specularTint = desc.specularTint;
+      m.anisotropic = desc.anisotropic;
+      m.sheen = desc.sheen;
+      m.sheenTint = desc.sheenTint;
+      m.clearcoat = desc.clearcoat;
+      m.clearcoatGloss = desc.clearcoatGloss;
+      m.ior = desc.ior;
+      break;
+    case pt::SceneMaterialKind::Emissive:
+      m.kind = MATERIAL_EMISSIVE;
+      m.emission = toOwl(desc.emission);
+      break;
+    }
     return m;
   }
 
@@ -466,7 +522,7 @@ namespace {
 
 Scene Scene::loadMitsubaXml(const std::string &path)
 {
-  const std::string xml = readTextFile(path);
+  const pt::SceneDesc desc = pt::loadMitsubaXmlSceneDesc(path);
   const std::filesystem::path xmlPath(path);
   const std::filesystem::path baseDir =
     xmlPath.has_parent_path() ? xmlPath.parent_path() : std::filesystem::path(".");
@@ -474,16 +530,9 @@ Scene Scene::loadMitsubaXml(const std::string &path)
   Scene scene;
   std::map<std::string, int> materialIds;
 
-  for (const XmlElement &bsdf : findElements(xml, "bsdf")) {
-    const std::string id = attr(bsdf, "id");
-    if (id.empty()) continue;
-
-    const std::string type = attr(bsdf, "type");
-    if (type == "diffuse") {
-      const owl::vec3f reflectance = rgbProp(bsdf.body, "reflectance", owl::vec3f(0.3f));
-      materialIds[id] = addMaterial(scene, makeLambertianXml(reflectance));
-    } else if (type == "disneybsdf") {
-      materialIds[id] = addMaterial(scene, makeDisneyXml(bsdf.body));
+  for (const pt::SceneMaterialDesc &material : desc.materials) {
+    if (!material.id.empty()) {
+      materialIds[material.id] = addMaterial(scene, makeMaterialXml(material));
     }
   }
 
@@ -494,82 +543,50 @@ Scene Scene::loadMitsubaXml(const std::string &path)
     materialIds["__diffmat"] = addMaterial(scene, makeLambertianXml(owl::vec3f(0.18f)));
   }
 
-  for (const XmlElement &shape : findElements(xml, "shape")) {
-    const std::string shapeType = attr(shape, "type");
-    if (shapeType != "serialized" && shapeType != "obj") {
-      std::cerr << "[mypt] Mitsuba XML: skipping unsupported shape type '"
-                << shapeType << "'" << std::endl;
-      continue;
-    }
-
-    int materialId = -1;
+  for (const pt::SceneShapeDesc &shape : desc.shapes) {
+    int materialId = materialIds.count(shape.materialId)
+      ? materialIds[shape.materialId]
+      : materialIds["__diffmat"];
     owl::vec3f areaEmission(0.f);
     bool hasAreaEmitter = false;
-    const std::vector<XmlElement> nestedBsdfs = findElements(shape.body, "bsdf");
-    if (!nestedBsdfs.empty()) {
-      const std::string type = attr(nestedBsdfs.front(), "type");
-      if (type == "disneybsdf") {
-        materialId = addMaterial(scene, makeDisneyXml(nestedBsdfs.front().body));
-      } else if (type == "diffuse") {
-        materialId = addMaterial(scene,
-          makeLambertianXml(rgbProp(nestedBsdfs.front().body, "reflectance", owl::vec3f(0.3f))));
-      }
-    } else {
-      const std::vector<XmlElement> refs = findElements(shape.body, "ref");
-      for (const XmlElement &ref : refs) {
-        if (attr(ref, "name") == "bsdf" || attr(ref, "name") == "reflectance") {
-          const auto it = materialIds.find(attr(ref, "id"));
-          if (it != materialIds.end()) {
-            materialId = it->second;
-            break;
-          }
-        }
-      }
-    }
 
-    for (const XmlElement &emitter : findElements(shape.body, "emitter")) {
-      if (attr(emitter, "type") == "area") {
-        areaEmission = rgbProp(emitter.body, "radiance", owl::vec3f(1.f));
-        materialId = addMaterial(scene, makeEmissiveXml(areaEmission));
+    for (const pt::SceneMaterialDesc &material : desc.materials) {
+      if (material.id == shape.materialId &&
+          material.kind == pt::SceneMaterialKind::Emissive) {
+        areaEmission = toOwl(material.emission);
         hasAreaEmitter = true;
         break;
       }
     }
 
-    if (materialId < 0) {
-      materialId = materialIds["__diffmat"];
-    }
-
-    if (shapeType == "obj") {
-      const std::string filename =
-        attr(findNamedChild(shape.body, "string", "filename"), "value");
-      TriangleMesh mesh = loadObjMeshXml(baseDir / filename, materialId);
-      applyTransform(mesh, parseTransform(shape.body));
+    if (shape.kind == pt::SceneShapeKind::Obj) {
+      TriangleMesh mesh = loadObjMeshXml(baseDir / shape.filename, materialId);
+      SimpleTransform transform;
+      transform.translate = toOwl(shape.transform.translate);
+      transform.scale = toOwl(shape.transform.scale);
+      applyTransform(mesh, transform);
       if (hasAreaEmitter) {
         addQuadLightFromMeshBounds(scene, mesh, areaEmission);
       }
       scene.meshes.push_back(std::move(mesh));
     } else {
       addMatpreviewShape(scene,
-                         intProp(shape.body, "shapeIndex", 0),
+                         shape.shapeIndex,
                          materialId,
-                         parseTransform(shape.body));
+                         {toOwl(shape.transform.translate), toOwl(shape.transform.scale)});
     }
   }
-
-  float envScale = 0.f;
-  for (const XmlElement &emitter : findElements(xml, "emitter")) {
-    if (attr(emitter, "type") == "envmap") {
-      envScale = std::max(envScale, floatProp(emitter.body, "scale", 1.f));
-    }
-  }
-  if (envScale > 0.f) {
-    addEnvLightApprox(scene, envScale);
-  } else if (scene.lights.empty()) {
+  if (scene.lights.empty()) {
     addEnvLightApprox(scene, 1.f);
   }
 
-  parseCameraXml(xml, scene);
+  if (desc.camera.valid) {
+    scene.hasCamera = true;
+    scene.cameraFrom = toOwl(desc.camera.origin);
+    scene.cameraAt = toOwl(desc.camera.target);
+    scene.cameraUp = toOwl(desc.camera.up);
+    scene.cameraFovy = desc.camera.fov;
+  }
   scene.computeBounds();
   std::cout << "[mypt] loaded Mitsuba XML subset: " << path
             << " (" << scene.meshes.size() << " meshes, "

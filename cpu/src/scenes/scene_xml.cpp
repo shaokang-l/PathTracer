@@ -1,6 +1,7 @@
 #include "scenes/scene_xml.hpp"
 
 #include "mesh_io/meshLoader.hpp"
+#include "pt/scene/mitsuba_xml.h"
 #include "pt/scene/scene_desc.h"
 #include "render/renderManager.hpp"
 #include "utils/objectTransform.hpp"
@@ -130,7 +131,7 @@ int intProp(const std::string &body, const std::string &name, int fallback) {
   return value.empty() ? fallback : std::stoi(value);
 }
 
-pt::Vec3f parseVec3Value(std::string value, const pt::Vec3f &fallback) {
+pt::Vec3f parseVec3ValueLocal(std::string value, const pt::Vec3f &fallback) {
   if (value.empty()) return fallback;
   std::replace(value.begin(), value.end(), ',', ' ');
   std::istringstream in(value);
@@ -146,12 +147,12 @@ pt::Vec3f parseVec3Value(std::string value, const pt::Vec3f &fallback) {
 pt::Vec3f rgbProp(const std::string &body, const std::string &name,
                   const pt::Vec3f &fallback) {
   const XmlElement e = findNamedChild(body, "rgb", name);
-  return parseVec3Value(attr(e, "value"), fallback);
+  return parseVec3ValueLocal(attr(e, "value"), fallback);
 }
 
 pt::Vec3f toWorldAttr(const XmlElement &e, const std::string &name,
                       const pt::Vec3f &fallback) {
-  return parseVec3Value(attr(e, name), fallback);
+  return parseVec3ValueLocal(attr(e, name), fallback);
 }
 
 gl::vec3 toGl(const pt::Vec3f &v) {
@@ -403,7 +404,7 @@ std::shared_ptr<Hittable> makeLightProxyFromAABB(const AABB &box,
 } // namespace
 
 SceneInfo loadMitsubaXmlScene(const std::string &path) {
-  const pt::SceneDesc desc = parseMitsubaXmlDesc(path);
+  const pt::SceneDesc desc = pt::loadMitsubaXmlSceneDesc(path);
   const std::filesystem::path xmlPath(path);
   const std::filesystem::path baseDir =
     xmlPath.has_parent_path() ? xmlPath.parent_path() : std::filesystem::path(".");

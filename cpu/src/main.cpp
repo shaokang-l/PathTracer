@@ -1,4 +1,5 @@
 #include "header.hpp"
+#include "pt/scene/render_settings.h"
 #include "scenes/scene_xml.hpp"
 
 #include <algorithm>
@@ -151,37 +152,36 @@ int main(int argc, char **argv)
     // scene = debug_curve();
   }
 
-  const int width = parseIntArg(argc, argv, "--width", -1);
-  const int height = parseIntArg(argc, argv, "--height", -1);
-  const int spp = parseIntArg(argc, argv, "--spp", -1);
-  const int max_depth = parseIntArg(argc, argv, "--max-depth", -1);
-  const float gamma = parseFloatArg(argc, argv, "--gamma", -1.f);
-  scene.bg_color = parseVec3Arg(argc, argv, "--background", scene.bg_color);
-  if (width > 0)
-    scene._width = static_cast<uint>(width);
-  if (height > 0)
-    scene._height = static_cast<uint>(height);
-  if (spp > 0)
+  pt::RenderSettings defaults;
+  defaults.width = static_cast<int>(scene._width);
+  defaults.height = static_cast<int>(scene._height);
+  defaults.spp = static_cast<int>(scene.spp_x * scene.spp_y);
+  defaults.maxDepth = static_cast<int>(scene.max_depth);
+  defaults.gamma = scene._gamma;
+  defaults.background = pt::Vec3f(scene.bg_color.x(), scene.bg_color.y(), scene.bg_color.z());
+  const pt::RenderSettings settings = pt::parseRenderSettings(argc, argv, defaults);
+
+  scene._width = static_cast<uint>(settings.width);
+  scene._height = static_cast<uint>(settings.height);
+  if (settings.spp > 0)
   {
-    const int spp_side = std::max(1, static_cast<int>(std::round(std::sqrt(float(spp)))));
+    const int spp_side = std::max(1, static_cast<int>(std::round(std::sqrt(float(settings.spp)))));
     scene.spp_x = static_cast<uint>(spp_side);
     scene.spp_y = static_cast<uint>(spp_side);
   }
-  if (max_depth > 0)
-    scene.max_depth = static_cast<uint>(max_depth);
-  if (gamma > 0.f)
-    scene._gamma = gamma;
-  if (hasArg(argc, argv, "--camera-origin") || hasArg(argc, argv, "--camera-target"))
+  scene.max_depth = static_cast<uint>(settings.maxDepth);
+  scene._gamma = settings.gamma;
+  scene.bg_color = gl::vec3(settings.background.x, settings.background.y, settings.background.z);
+  if (settings.hasCameraOverride)
   {
     const gl::vec3 origin =
-        parseVec3Arg(argc, argv, "--camera-origin", gl::vec3(0.f, 0.f, -18.f));
+        gl::vec3(settings.cameraOrigin.x, settings.cameraOrigin.y, settings.cameraOrigin.z);
     const gl::vec3 target =
-        parseVec3Arg(argc, argv, "--camera-target", gl::vec3(0.f));
+        gl::vec3(settings.cameraTarget.x, settings.cameraTarget.y, settings.cameraTarget.z);
     const gl::vec3 up =
-        parseVec3Arg(argc, argv, "--camera-up", gl::vec3(0.f, 1.f, 0.f));
-    const float fov = parseFloatArg(argc, argv, "--fov", 45.f);
+        gl::vec3(settings.cameraUp.x, settings.cameraUp.y, settings.cameraUp.z);
     scene.camera = std::make_shared<PerspectiveCamera>(
-        gl::to_radian(fov),
+        gl::to_radian(settings.fov),
         float(scene._width) / float(scene._height),
         10.f,
         1000.f,

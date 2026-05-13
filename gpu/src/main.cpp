@@ -7,6 +7,7 @@
 #include "Scene.h"
 #include "SceneExport.h"
 #include "Viewer.h"
+#include "pt/scene/render_settings.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -147,21 +148,18 @@ namespace {
   }
 
   void setDefaultCamera(mypt::Renderer &renderer,
-                        int argc,
-                        char **argv,
+                        const pt::RenderSettings &settings,
                         const mypt::Scene &scene,
                         float fovyDegrees = 45.f)
   {
-    if (hasFlag(argc, argv, "--camera-origin") ||
-        hasFlag(argc, argv, "--camera-target")) {
+    if (settings.hasCameraOverride) {
       const owl::vec3f origin =
-        parseVec3Arg(argc, argv, "--camera-origin", owl::vec3f(0.f, 0.f, -18.f));
+        owl::vec3f(settings.cameraOrigin.x, settings.cameraOrigin.y, settings.cameraOrigin.z);
       const owl::vec3f target =
-        parseVec3Arg(argc, argv, "--camera-target", owl::vec3f(0.f));
+        owl::vec3f(settings.cameraTarget.x, settings.cameraTarget.y, settings.cameraTarget.z);
       const owl::vec3f up =
-        parseVec3Arg(argc, argv, "--camera-up", owl::vec3f(0.f, 1.f, 0.f));
-      const float fov = parseFloatArg(argc, argv, "--fov", fovyDegrees);
-      renderer.setCamera(origin, target, up, fov);
+        owl::vec3f(settings.cameraUp.x, settings.cameraUp.y, settings.cameraUp.z);
+      renderer.setCamera(origin, target, up, settings.fov);
       return;
     }
 
@@ -204,17 +202,25 @@ int main(int argc, char **argv)
             << scene.bounds.lower << " .. " << scene.bounds.upper << "]"
             << std::endl;
 
+  pt::RenderSettings defaultSettings;
+  defaultSettings.width = 1280;
+  defaultSettings.height = 720;
+  defaultSettings.spp = 1;
+  defaultSettings.maxDepth = 8;
+  defaultSettings.toneMap = pt::ToneMapKind::Reinhard;
+  pt::RenderSettings settings = pt::parseRenderSettings(argc, argv, defaultSettings);
+
   mypt::Renderer renderer;
-  renderer.setSamplesPerPixel(parseIntArg(argc, argv, "--spp", 1));
-  renderer.setMaxBounces(parseIntArg(argc, argv, "--max-depth", 8));
-  renderer.setMissColor(parseVec3Arg(argc, argv, "--miss-color", owl::vec3f(0.f)));
-  const std::string_view tonemap = parseStringArg(argc, argv, "--tonemap", "reinhard");
-  renderer.setOutputTransform(parseFloatArg(argc, argv, "--gamma", 2.2f),
-                              tonemap != "clamp");
+  renderer.setSamplesPerPixel(settings.spp);
+  renderer.setMaxBounces(settings.maxDepth);
+  renderer.setMissColor(owl::vec3f(settings.background.x,
+                                   settings.background.y,
+                                   settings.background.z));
+  renderer.setOutputTransform(settings.gamma, settings.toneMap == pt::ToneMapKind::Reinhard);
   renderer.setScene(scene);
 
-  const int width = parseIntArg(argc, argv, "--width", 1280);
-  const int height = parseIntArg(argc, argv, "--height", 720);
+  const int width = settings.width;
+  const int height = settings.height;
   const bool visible = !hasFlag(argc, argv, "--headless");
   if (!visible && !outputPath.empty()) {
     uint32_t *deviceFb = nullptr;
@@ -227,7 +233,7 @@ int main(int argc, char **argv)
     }
 
     renderer.resize(deviceFb, owl::vec2i(width, height));
-    setDefaultCamera(renderer, argc, argv, scene);
+    setDefaultCamera(renderer, settings, scene);
     const int frames = std::max(1, maxFrames);
     for (int i = 0; i < frames; ++i) {
       renderer.render();
