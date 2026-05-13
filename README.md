@@ -1,6 +1,6 @@
 # Path Tracer
 
-An NEE + MIS path tracer, supports various BxDFs / Lights / Volumes and Monte Carlo effects.
+An NEE + MIS path tracer, supports various BxDFs / Lights / Volumes and Monte Carlo effects. Supports both CPU and GPU (Optix) backend.
 
 <img src="images/hdri.png" alt="image" style="zoom: 105%;" />
 
