@@ -2,15 +2,21 @@
 
 An NEE + MIS path tracer, supports various BxDFs / Lights / Volumes and Monte Carlo effects. Supports both CPU and GPU (Optix) backend.
 
+## Project Links
+
+- [Feature Roadmap / TODO](TODO.md)
+- [ReSTIR DI Roadmap](docs/restir_di_roadmap.md)
+- [GPU Backend Notes](gpu/README.md)
+
+![images/array.png](images/array.png)
+
+> Disney BSDF bunny array, with Optix denoiser. 
+
+
+
 <img src="images/hdri.png" alt="image" style="zoom: 105%;" />
 
 > Rough glass (alpha = 0.05) bunny with HDRI lighting
-
-
-
-<img src="images/dielectric.png" alt="image" style="zoom: 67%;" />
-
-> Rough glass bunny with Microfacet Conductor background 
 
 
 
@@ -43,6 +49,12 @@ The project has two renderer backends:
 * `common/` contains a small host/device math layer shared by both backends
   for formulas that are worth keeping numerically consistent, such as
   Fresnel and Trowbridge-Reitz/GGX microfacet helpers.
+
+CPU/GPU scene loading and render settings now share a small validation-oriented
+interface. Both backends can load the Mitsuba XML subset through the common
+scene description layer, and both accept aligned render settings such as
+`--width`, `--height`, `--spp`, `--max-depth`, `--gamma`, `--tonemap`,
+`--background`, camera overrides, and `--debug-view`.
 
 The GPU backend currently favors a clear architecture over premature kernel
 specialization. OptiX closest-hit programs build a compact PRD, raygen owns the
@@ -131,6 +143,36 @@ profilers can run a deterministic number of frames and exit:
 ```powershell
 .\build-gpu-ninja\gpu\mypt.exe --frames 120
 ```
+
+## Validation and Debugging
+
+The current CPU/GPU alignment entry point is the Cornell box XML scene:
+
+```text
+assets/validation/cornell_box.xml
+```
+
+Useful scripts:
+
+```powershell
+.\tools\run_xml_alignment_smoke.ps1
+.\tools\run_backend_convergence_smoke.ps1
+```
+
+Both backends support deterministic debug output modes:
+
+```powershell
+--debug-view beauty
+--debug-view normal
+--debug-view albedo
+--debug-view visibility
+--debug-view material-id
+--debug-view light-id
+```
+
+These modes are intended for CPU/GPU alignment and future ReSTIR DI debugging.
+For the ReSTIR DI implementation plan, see
+`docs/restir_di_roadmap.md`.
 
 
 

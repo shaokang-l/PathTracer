@@ -13,11 +13,15 @@ gpu/
 ├── CMakeLists.txt
 ├── README.md
 └── src/
-    ├── main.cpp          thin entry point; supports `--frames N` for profiling
+    ├── main.cpp          entry point; CLI scene/render settings, headless output
     ├── Viewer.{h,cpp}    GLFW window + camera controls
     ├── Renderer.{h,cpp}  owns OWL context, module, programs, groups, SBT,
-    │                     launch params, material/light buffers, and timing
+    │                     launch params, material/light buffers, denoiser, timing
     ├── Scene.{h,cpp}     host-side POD scene: meshes, materials, lights
+    ├── SceneXml.cpp      lowers the shared Mitsuba XML scene description
+    ├── SceneExport.*     exports the built-in GPU scene to Mitsuba XML
+    ├── Denoiser.{h,cpp}  host-side OptiX denoiser wrapper
+    ├── postprocess.*     CUDA tone-map/gamma/pack pass
     ├── deviceCode.cu     OptiX raygen / closest-hit / miss programs
     ├── deviceCode.h      compatibility umbrella for shared POD headers
     ├── geometryData.h    geometry SBT records, currently TriangleMeshSBT
@@ -57,9 +61,9 @@ Key design choices:
 - **`Renderer` is the ONLY class that touches the OWL C API.** Your
   future `Integrator`, `Camera`, `Sampler`, `Light`, etc. classes can
   layer on top without ever seeing `OWLContext`.
-- **Launch parameters, not SBT rebuilds, for per-frame data.** Camera
-  pose, frame index, spp, bounces all live in `LaunchParams` — the
-  main path for interactive/progressive rendering in OptiX.
+- **Launch parameters, not SBT rebuilds, for per-frame data.** Camera pose,
+  frame index, spp, bounces, debug view, material/light buffers, and output
+  pointers all live in `LaunchParams`, which keeps interactive updates cheap.
 - **Thin closest-hit, raygen-side shading.** The radiance closest-hit
   program reconstructs `hitP`, the geometric normal, and `materialId`.
   The raygen program fetches `MaterialGPU`, builds the BSDF wrapper, and
@@ -76,40 +80,65 @@ Key design choices:
 - **Two ray types.** Radiance rays use the main closest-hit/miss programs.
   Shadow rays use a minimal closest-hit and miss pair for binary visibility
   queries during direct-light sampling.
-- **Progressive accumulator in float4 HDR + tone-map + gamma in the
-  raygen.** Accumulator resets on any camera change.
+- **Progressive accumulator in float4 HDR, then CUDA post-process.** Raygen
+  writes linear HDR; optional OptiX denoising and tone-map/gamma packing happen
+  after the OptiX launch. Accumulator resets on any camera change.
 - **Built-in profiling hooks.** `Renderer` records CUDA event timings and
   prints smoothed frame time / primary-ray throughput periodically. `main`
   supports `--frames N` for Nsight Compute / Systems runs.
+- **Headless validation path.** `main` supports headless PNG output and shared
+  CPU/GPU render settings, including `--scene-xml`, camera overrides, tone-map
+  settings, and `--debug-view`.
+- **Runtime debug-view switching.** In the interactive viewer, keys `1` through
+  `6` switch between `beauty`, `normal`, `albedo`, `visibility`,
+  `material-id`, and `light-id`.
 
 ## Building
 
-The top-level CMake project builds the CPU backend by default. Enable this
-backend with `PATHTRACER_BUILD_GPU=ON`:
+Use the checked-in CMake presets from the repository root:
 
-```bash
+```powershell
 git submodule update --init --recursive
-cmake -S . -B build -DPATHTRACER_BUILD_GPU=ON
-cmake --build build --target mypt --config Release
+cmake --preset gpu-ninja-relwithdebinfo
+cmake --build --preset gpu-ninja-relwithdebinfo
 ```
 
-The root `CMakeLists.txt` defaults CUDA architecture to Ada / RTX 40-series
-(`89`) when the GPU backend is enabled and no architecture is provided:
+The generated executable is:
 
-```cmake
-set(CMAKE_CUDA_ARCHITECTURES 89 CACHE STRING "CUDA arch list")
+```text
+build-gpu-ninja/gpu/mypt.exe
 ```
 
 Run interactively:
 
-```bash
-./build/gpu/mypt
+```powershell
+.\build-gpu-ninja\gpu\mypt.exe
 ```
 
 Run a fixed number of frames for profiling:
 
-```bash
-./build/gpu/mypt --frames 300
+```powershell
+.\build-gpu-ninja\gpu\mypt.exe --frames 300
+```
+
+Run a headless XML validation render:
+
+```powershell
+.\build-gpu-ninja\gpu\mypt.exe `
+  --scene-xml assets\validation\cornell_box.xml `
+  --headless --width 64 --height 64 --spp 1 --frames 1 `
+  --camera-origin 0,1,-18 --camera-target 0,1,0 `
+  --debug-view normal --output artifacts\debug_views\gpu_normal.png
+```
+
+Useful shared render/debug flags:
+
+```text
+--scene-xml <path>
+--width <int> --height <int> --spp <int> --max-depth <int>
+--gamma <float> --tonemap clamp|reinhard --background r,g,b
+--camera-origin x,y,z --camera-target x,y,z --camera-up x,y,z --fov <deg>
+--debug-view beauty|normal|albedo|visibility|material-id|light-id
 ```
 
 ## Current GPU Pipeline
@@ -127,7 +156,15 @@ raygen
     trace ShadowRay for visibility
     sample BSDF for the next bounce
     update throughput and Russian roulette
+  write linear HDR accumulator
+postprocess
+  optionally denoise accumulated beauty
+  tone-map/gamma/pack to RGBA8 framebuffer
 ```
+
+Debug views branch early in raygen. They use deterministic pixel-center primary
+rays, do not use temporal accumulation, and skip the denoiser so they remain
+useful for CPU/GPU alignment.
 
 This is intentionally close to the CPU path tracer's mental model:
 
@@ -140,16 +177,18 @@ GPU: OptiX hit  -> MaterialGPU.kind switch dispatch
 
 Near-term work should keep the current separation of concerns:
 
-1. **Materials** - grow `MaterialGPU` and `bxdf/` one material family at a
-   time. Keep per-BxDF math in device helpers and let raygen own the
+1. **Materials** - keep growing `MaterialGPU` and `bxdf/` one material family
+   at a time. Keep per-BxDF math in device helpers and let raygen own the
    integrator loop.
-2. **Direct lighting** - the first quad-light sampler and shadow ray path are
-   in place. The next step is making the estimator robust enough for multiple
-   lights and adding MIS with the BSDF pdf.
+2. **Direct lighting** - quad-light sampling and binary shadow rays are in
+   place. The next step is making the estimator robust for many lights, then
+   adding MIS or ReSTIR DI.
 3. **Geometry** - keep host scene conversion in `Scene.cpp` / `Renderer.cpp`.
    If a single CPU mesh contains multiple materials, split it into multiple
    `TriangleMesh` records or add per-primitive material indexing later.
-4. **Profiling** - use Nsight data before changing architecture. Per-material
+4. **Validation** - keep XML alignment and debug views green before adding
+   temporal/spatial reuse or more complex light sampling.
+5. **Profiling** - use Nsight data before changing architecture. Per-material
    closest-hit programs can remove a material switch, but they also spread
    shading logic across shader entry points. Wavefront scheduling is a larger
    step and should wait until material/light coverage is stable.
@@ -160,12 +199,14 @@ Near-term work should keep the current separation of concerns:
   is still via `MaterialGPU.kind`.
 - Direct lighting is present but still simple: one flat `LightGPU` buffer,
   quad-light sampling, binary shadow visibility, no MIS yet.
-- Dielectric BxDF is still a stub on the GPU.
 - No textures, normal maps, alpha masks, or per-primitive material ids yet.
 - No motion blur, no instancing (one BLAS containing everything).
 - No volumes or participating media on the GPU.
 - No wavefront scheduler.
-- No denoiser yet.
+- No ReSTIR DI yet; see `../docs/restir_di_roadmap.md` for the implementation
+  plan.
+- Denoiser exists as an optional post-process, but it is not a substitute for
+  fixing sampling/debug-view correctness.
 
 All of these are expected follow-ups; the current focus is keeping the GPU
 backend small enough to reason about while it catches up to CPU features.

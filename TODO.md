@@ -1,4 +1,4 @@
-# TODO
+# Feature Roadmap / TODO
 
 ## CODE LEVEL
 * ✅ Refactor code for dependency management
@@ -6,6 +6,18 @@
 
 ## TEST LEVEL
 * ✅ Verify obj loader correctness
+* ✅ Add a shared Mitsuba XML validation scene for CPU/GPU alignment
+* ✅ Add CPU/GPU XML alignment smoke script
+* ✅ Add CPU/GPU high-spp convergence smoke script with MAE/RMSE thresholds
+* Keep expanding validation scenes beyond Cornell box
+* Add image diff / false-color diagnostic output for failed convergence checks
+
+## COMMON / SCENE IO
+* ✅ Add shared `pt::RenderSettings` for aligned CPU/GPU CLI parameters
+* ✅ Add shared `pt::SceneDesc` for backend-agnostic scene loading
+* ✅ Move Mitsuba XML subset parsing into common code
+* ✅ Lower shared scene descriptions into CPU and GPU backend scenes
+* Extend XML support for more Mitsuba BSDFs, transforms, textures, and emitters
 
 ## GPU BACKEND - OWL / OptiX
 * ✅ Add optional GPU backend behind `PATHTRACER_BUILD_GPU`
@@ -22,6 +34,10 @@
 * ✅ Add initial direct-light sampling in raygen
 * ✅ Add fixed-frame benchmark mode for Nsight profiling
 * ✅ Add CUDA-event frame timing / primary-ray throughput logging
+* ✅ Add headless PNG output path for validation renders
+* ✅ Add configurable gamma / tone-map output transform
+* ✅ Add optional OptiX denoiser post-process
+* ✅ Add GPU debug output modes (`normal`, `albedo`, `visibility`, `material-id`, `light-id`)
 * Implement smooth Dielectric GPU BxDF
 * Add direct-light MIS with BSDF pdf and power heuristic
 * Generalize GPU light sampling beyond one quad-light path
@@ -30,6 +46,23 @@
 * Profile current raygen kernel with Nsight Compute and track register pressure / occupancy
 * Consider per-material closest-hit shaders only if material dispatch becomes a measured bottleneck
 * Consider wavefront path tracing after material, light, and visibility paths are stable
+
+## CPU BACKEND
+* ✅ Add Mitsuba XML scene loading through shared scene description parser
+* ✅ Add CLI render settings aligned with the GPU backend
+* ✅ Add CPU debug output modes (`normal`, `albedo`, `visibility`, `material-id`, `light-id`)
+* Keep CPU NEE integrator as a validation reference for simple surface scenes
+* Improve CPU material debug albedo extraction beyond the current BSDF probe fallback
+
+## RESTIR DI
+* ✅ Add ReSTIR DI implementation roadmap in `docs/restir_di_roadmap.md`
+* Add GPU reservoir/sample POD structs and per-pixel reservoir buffers
+* Add `--direct-light nee|restir` backend selection
+* Implement per-pixel RIS without temporal or spatial reuse
+* Add ReSTIR debug views (`reservoir-weight`, `reservoir-m`, `reservoir-target`, `restir-light-id`)
+* Validate no-reuse ReSTIR against current NEE on Cornell box XML
+* Add temporal reuse after no-reuse RIS is stable
+* Add spatial reuse after temporal rejection/debugging is stable
 
 ## FEATURE LEVEL - Light
 * ✅ Environment Light
