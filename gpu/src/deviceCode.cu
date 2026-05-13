@@ -242,6 +242,9 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
 
   L = L * (1.f / float(spp));
 
+  // Raygen now writes the linear-HDR accumulator only; tone-mapping and
+  // fbPtr packing live in postprocess.cu so a denoiser (or any other
+  // post-process) can slot in between accumulate and display.
   float4 prev = (params.accumID > 0)
     ? params.accumBuffer[pxIdx]
     : make_float4(0.f, 0.f, 0.f, 0.f);
@@ -252,14 +255,4 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
   accum.z = (prev.z * float(params.accumID) + L.z) / n;
   accum.w = 1.f;
   params.accumBuffer[pxIdx] = accum;
-
-  vec3f display;
-  display.x = accum.x / (1.f + accum.x);
-  display.y = accum.y / (1.f + accum.y);
-  display.z = accum.z / (1.f + accum.z);
-  display.x = powf(fmaxf(0.f, display.x), 1.f / 2.2f);
-  display.y = powf(fmaxf(0.f, display.y), 1.f / 2.2f);
-  display.z = powf(fmaxf(0.f, display.z), 1.f / 2.2f);
-
-  params.fbPtr[pxIdx] = owl::make_rgba(display);
 }

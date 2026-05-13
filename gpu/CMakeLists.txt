@@ -57,11 +57,15 @@ add_executable(mypt
   src/Renderer.cpp
   src/Scene.cpp
   src/Viewer.cpp
+  src/postprocess.cu
 )
 
 set_target_properties(mypt PROPERTIES
   CXX_STANDARD 17
   CXX_STANDARD_REQUIRED ON
+  CUDA_STANDARD 17
+  CUDA_STANDARD_REQUIRED ON
+  CUDA_SEPARABLE_COMPILATION ON
 )
 
 target_include_directories(mypt PRIVATE src)

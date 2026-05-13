@@ -3,6 +3,7 @@
 #include "geometryData.h"
 #include "launchParams.h"
 #include "owl/owl_host.h"
+#include "postprocess.h"
 #include "rayTypes.h"
 
 #include <cmath>
@@ -243,6 +244,18 @@ namespace mypt {
 
     cudaEventRecord(eventStart_, /*stream=*/0);
     owlLaunch2D(rayGen_, fbSize_.x, fbSize_.y, lp_);
+
+    // Post-process: tone-map the HDR accumulator to the GL-shared fbPtr.
+    // Lives outside the OptiX PTX so additional post steps (denoise,
+    // exposure, bloom, ...) can chain here without touching raygen.
+    const auto *hdrIn = accumBuffer_
+      ? static_cast<const float4 *>(owlBufferGetPointer(accumBuffer_, 0))
+      : nullptr;
+    if (hdrIn && fbPtr_) {
+      const CUstream stream = owlContextGetStream(ctx_, 0);
+      launchTonemap(hdrIn, fbPtr_, fbSize_.x, fbSize_.y, stream);
+    }
+
     cudaEventRecord(eventEnd_,   /*stream=*/0);
     cudaEventSynchronize(eventEnd_);
 
