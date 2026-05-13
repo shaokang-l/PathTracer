@@ -66,6 +66,38 @@ namespace mypt {
     return m;
   }
 
+  static MaterialGPU makeConductor(const owl::vec3f &eta,
+                                   const owl::vec3f &k,
+                                   float             alpha)
+  {
+    MaterialGPU m = {};
+    m.kind = MATERIAL_CONDUCTOR;
+    m.albedo = owl::vec3f(1.f);
+    m.eta = eta;
+    m.k = k;
+    m.alpha_x = alpha;
+    m.alpha_y = alpha;
+    return m;
+  }
+
+  static MaterialGPU makeDielectric(float ior, float alpha)
+  {
+    MaterialGPU m = {};
+    m.kind = MATERIAL_DIELECTRIC;
+    m.ior = ior;
+    m.alpha_x = alpha;
+    m.alpha_y = alpha;
+    return m;
+  }
+
+  static MaterialGPU makeThinDielectric(float ior)
+  {
+    MaterialGPU m = {};
+    m.kind = MATERIAL_THIN_DIELECTRIC;
+    m.ior = ior;
+    return m;
+  }
+
   static MaterialGPU makeEmissive(const owl::vec3f &emission)
   {
     MaterialGPU m = {};
@@ -74,10 +106,16 @@ namespace mypt {
     return m;
   }
 
-  static TriangleMesh loadObjMeshYUp(const std::string &path,
-                                     int32_t            materialId,
-                                     float              targetHeight,
-                                     const owl::vec3f  &centerXZ)
+  enum class ObjUpAxis {
+    Y,
+    Z,
+  };
+
+  static TriangleMesh loadObjMesh(const std::string &path,
+                                  int32_t            materialId,
+                                  float              targetHeight,
+                                  const owl::vec3f  &baseCenter,
+                                  ObjUpAxis          sourceUpAxis)
   {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -102,7 +140,9 @@ namespace mypt {
     }
 
     const owl::vec3f srcCenter = srcBounds.center();
-    const float srcHeight = srcBounds.upper.z - srcBounds.lower.z; // OBJ is z-up.
+    const float srcHeight = (sourceUpAxis == ObjUpAxis::Z)
+      ? (srcBounds.upper.z - srcBounds.lower.z)
+      : (srcBounds.upper.y - srcBounds.lower.y);
     const float scale = srcHeight > 0.f ? targetHeight / srcHeight : 1.f;
 
     TriangleMesh mesh;
@@ -114,11 +154,17 @@ namespace mypt {
                          attrib.vertices[i + 1],
                          attrib.vertices[i + 2]);
 
-      // Convert the teapot OBJ from z-up to the renderer's y-up convention.
-      mesh.vertices.push_back(owl::vec3f(
-        centerXZ.x + (p.x - srcCenter.x) * scale,
-        centerXZ.y + (p.z - srcBounds.lower.z) * scale,
-        centerXZ.z - (p.y - srcCenter.y) * scale));
+      if (sourceUpAxis == ObjUpAxis::Z) {
+        mesh.vertices.push_back(owl::vec3f(
+          baseCenter.x + (p.x - srcCenter.x) * scale,
+          baseCenter.y + (p.z - srcBounds.lower.z) * scale,
+          baseCenter.z - (p.y - srcCenter.y) * scale));
+      } else {
+        mesh.vertices.push_back(owl::vec3f(
+          baseCenter.x + (p.x - srcCenter.x) * scale,
+          baseCenter.y + (p.y - srcBounds.lower.y) * scale,
+          baseCenter.z + (p.z - srcCenter.z) * scale));
+      }
     }
 
     for (const auto &shape : shapes) {
@@ -149,10 +195,11 @@ namespace mypt {
 
     s.materials.push_back(makeLambertian(vec3f(0.72f, 0.70f, 0.66f))); // floor/back
     s.materials.push_back(makeLambertian(vec3f(0.65f, 0.08f, 0.06f))); // left wall
-    s.materials.push_back(makeLambertian(vec3f(0.10f, 0.42f, 0.18f))); // right wall
-    s.materials.push_back(makeLambertian(vec3f(0.80f, 0.62f, 0.35f))); // teapot
+    s.materials.push_back(makeConductor(vec3f(1.35f, 0.97f, 0.62f),
+                                        vec3f(7.62f, 6.62f, 5.31f),
+                                        0.35f)); // rough gold wall
+    s.materials.push_back(makeDielectric(1.5f, 0.08f)); // rough glass bunny
     s.materials.push_back(makeLambertian(vec3f(0.34f, 0.36f, 0.42f))); // pedestal
-    s.materials.push_back(makeMirror(vec3f(0.92f, 0.93f, 0.95f)));
     s.materials.push_back(makeEmissive(vec3f(16.f, 15.f, 13.f)));
 
     TriangleMesh floor;
@@ -177,34 +224,25 @@ namespace mypt {
 
     TriangleMesh pedestal;
     pedestal.materialId = 4;
-    pushBox(pedestal, vec3f(-1.35f, 0.f, -1.35f), vec3f(1.35f, 0.45f, 1.35f));
+    pushBox(pedestal, vec3f(-1.5f, 0.f, -1.5f), vec3f(1.5f, 0.35f, 1.5f));
     s.meshes.push_back(std::move(pedestal));
 
-    const std::string teapotPath = std::string(PATHTRACER_ASSET_DIR) + "/teapot.obj";
-    TriangleMesh teapot = loadObjMeshYUp(teapotPath,
-                                         /*materialId=*/3,
-                                         /*targetHeight=*/2.35f,
-                                         vec3f(0.f, 0.45f, 0.f));
-    s.meshes.push_back(std::move(teapot));
-
-    TriangleMesh mirrorBox;
-    mirrorBox.materialId = 5;
-    pushBox(mirrorBox, vec3f(2.65f, 0.f, -1.0f), vec3f(4.25f, 2.1f, 0.65f));
-    s.meshes.push_back(std::move(mirrorBox));
-
-    TriangleMesh smallBox;
-    smallBox.materialId = 4;
-    pushBox(smallBox, vec3f(-4.2f, 0.f, -2.7f), vec3f(-2.8f, 1.25f, -1.3f));
-    s.meshes.push_back(std::move(smallBox));
+    const std::string bunnyPath = std::string(PATHTRACER_ASSET_DIR) + "/bunny.obj";
+    TriangleMesh bunny = loadObjMesh(bunnyPath,
+                                     /*materialId=*/3,
+                                     /*targetHeight=*/2.4f,
+                                     vec3f(0.f, 0.35f, 0.f),
+                                     ObjUpAxis::Y);
+    s.meshes.push_back(std::move(bunny));
 
     TriangleMesh light;
-    light.materialId = 6;
+    light.materialId = 5;
     pushBox(light, vec3f(-2.0f, 5.35f, -2.0f), vec3f(2.0f, 5.45f, 2.0f));
     s.meshes.push_back(std::move(light));
 
     LightGPU quadLight;
     quadLight.kind = LIGHT_QUAD;
-    quadLight.emission = s.materials[6].emission;
+    quadLight.emission = s.materials[5].emission;
     quadLight.v0 = vec3f(-2.0f, 5.35f, -2.0f);
     quadLight.edgeU = vec3f(4.f, 0.f, 0.f);
     quadLight.edgeV = vec3f(0.f, 0.f, 4.f);

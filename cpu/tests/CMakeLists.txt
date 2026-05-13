@@ -36,6 +36,7 @@ set(PATHTRACER_TESTS
     test_refract
     test_dielectric
     test_pdf_normalization
+    test_common_material
 )
 
 foreach(test_name IN LISTS PATHTRACER_TESTS)

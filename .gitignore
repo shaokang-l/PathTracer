@@ -4,3 +4,8 @@
 .vscode/
 *.ncu-rep
 *.nsys-rep
+
+/build-cpu/
+/build-gpu/
+/build-clangd/
+/assets/

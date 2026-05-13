@@ -27,7 +27,13 @@ public:
 
     if (!gl::pbrt::sameHemisphere(wo_local, wi_local))
 #ifdef BIASED_SAMPLING
-      wi_local.z() = -wo_local.z();
+      do
+      {
+        using namespace gl;
+        vec2 u2 = vec2(rand_num(), rand_num());
+        vec3 m = distrib.sample_wm(wo_local, u2);
+        wi_local = gl::pbrt::reflect(wo_local, m);
+      } while (!gl::pbrt::sameHemisphere(wo_local, wi_local));
 #elif defined DISCARD_SAMPLING
       return gl::vec3(0.f);
 #else

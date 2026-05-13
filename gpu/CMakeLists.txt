@@ -52,6 +52,11 @@ embed_ptx(
     src/deviceCode.cu
 )
 
+target_include_directories(mypt-ptx
+  PRIVATE
+    ${CMAKE_SOURCE_DIR}/common/include
+)
+
 add_executable(mypt
   src/main.cpp
   src/Denoiser.cpp
@@ -72,6 +77,7 @@ set_target_properties(mypt PROPERTIES
 target_include_directories(mypt
   PRIVATE
     src
+    ${CMAKE_SOURCE_DIR}/common/include
     ${CMAKE_SOURCE_DIR}/cpu/include
 )
 

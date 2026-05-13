@@ -31,6 +31,7 @@ target_include_directories(pathtracer
     PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${PATHTRACER_CPU_INCLUDE_DIR}
+        ${CMAKE_SOURCE_DIR}/common/include
 )
 
 # ────────────────────────────────────────────────────────────────────
