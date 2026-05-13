@@ -2,11 +2,11 @@
 #include "header.hpp"
 #include "utils/matrix.hpp"
 
-#define LIGHT_SAMPLE_X 2
-#define LIGHT_SAMPLE_Y 2
-#define MAX_RAY_DEPTH 15
-#define SPP_X 2
-#define SPP_Y 2
+#define LIGHT_SAMPLE_X 1
+#define LIGHT_SAMPLE_Y 1
+#define MAX_RAY_DEPTH 10
+#define SPP_X 4
+#define SPP_Y 4
 #define GAMMA 2.2
 #define WIDTH 500
 #define HEIGHT 500

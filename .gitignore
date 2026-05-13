@@ -7,5 +7,6 @@
 
 /build-cpu/
 /build-gpu/
+/build-gpu-ninja/
 /build-clangd/
 /assets/

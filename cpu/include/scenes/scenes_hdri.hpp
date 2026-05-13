@@ -17,7 +17,7 @@ SceneInfo hdri_uniform_check()
                             LAMBERTIAN_RED);
 
     scene.environment_light = make_shared<EnvironmentLight>(
-        "../../assets/hdri/uniform.jpg", 1.0f);
+        "assets/hdri/uniform.jpg", 1.0f);
     scene.objects.addObject(sphere);
     return scene;
 }
@@ -35,7 +35,7 @@ SceneInfo hdri_directional_check()
                             LAMBERTIAN_GRAY);
 
     scene.environment_light = make_shared<EnvironmentLight>(
-        "../../assets/hdri/directional.png", 1.0f);
+        "assets/hdri/directional.png", 1.0f);
     scene.objects.addObject(sphere);
     return scene;
 }
@@ -49,7 +49,7 @@ SceneInfo hdri_sunset_check()
     scene.objects.clear();
 
     std::shared_ptr<Hittable> mesh =
-        loadOBJMesh("../../assets/bunny_high.obj", ROUGH_GLASS_MAT);
+        loadOBJMesh("assets/bunny_high.obj", ROUGH_GLASS_MAT);
     // order matters!
     // ball = make_shared<Rotate<Axis::Y>>(ball, M_PI);
     mesh = make_shared<Rotate<Axis::Y>>(mesh, M_PI * 1.1f);
@@ -61,7 +61,7 @@ SceneInfo hdri_sunset_check()
                             SILVER_MAT);
 
     scene.environment_light = make_shared<EnvironmentLight>(
-        "../../assets/hdri/pink_sunset.jpg", 1.5f);
+        "assets/hdri/pink_sunset.jpg", 1.5f);
     scene.objects.addObject(mesh);
     scene.objects.addObject(plane);
     return scene;

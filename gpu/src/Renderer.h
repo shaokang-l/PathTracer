@@ -101,7 +101,8 @@ namespace mypt {
     OWLBuffer        lightBuffer_    = nullptr;
     Denoiser         denoiser_;
     bool             denoiserEnabled_ = true;
-    int              denoiserMinAccumulatedSpp_ = 4;
+    int              denoiserMinAccumulatedSpp_ = 32;
+    int              denoiserInterval_ = 8;
     int              lightCount_     = 0;
 
     owl::vec2i       fbSize_        = { 0, 0 };

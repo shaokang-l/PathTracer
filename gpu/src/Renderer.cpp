@@ -258,7 +258,12 @@ namespace mypt {
       const int accumulatedSpp = (accumID_ + 1) * samplesPerPixel_;
 
       if (denoiserEnabled_ && accumulatedSpp >= denoiserMinAccumulatedSpp_) {
-        displayHdr = denoiser_.denoise(hdrIn, fbSize_.x, fbSize_.y, stream);
+        const bool shouldUpdateDenoiser =
+          ((accumID_ + 1) % denoiserInterval_) == 0 || !denoiser_.output();
+
+        displayHdr = shouldUpdateDenoiser
+          ? denoiser_.denoise(hdrIn, fbSize_.x, fbSize_.y, stream)
+          : denoiser_.output();
       }
 
       launchTonemap(displayHdr, fbPtr_, fbSize_.x, fbSize_.y, stream);
