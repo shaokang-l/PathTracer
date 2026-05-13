@@ -62,6 +62,8 @@ add_executable(mypt
   src/Denoiser.cpp
   src/Renderer.cpp
   src/Scene.cpp
+  src/SceneExport.cpp
+  src/SceneXml.cpp
   src/Viewer.cpp
   src/postprocess.cu
 )

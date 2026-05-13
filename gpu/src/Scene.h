@@ -20,6 +20,7 @@
 
 #include <owl/common/math/vec.h>
 #include <owl/common/math/box.h>
+#include <string>
 #include <vector>
 
 namespace mypt {
@@ -43,6 +44,22 @@ namespace mypt {
 
     // Convenience: load a built-in test scene (Cornell-box-ish).
     static Scene makeTestScene();
+
+    // Disney Principled showcase matching CPU `cornell_box_DisneyPrincipledBSDF`
+    // (walls + 12 spheres with Shell0..Shell11 presets).
+    static Scene makeDisneyCornellScene();
+
+    // Same layout as `makeTestScene()` (floor / light / gold backdrops), but every
+    // bunny uses a Disney Principled preset from `gl::DisneyBSDF` in
+    // `cpu/include/material/commonMaterials.hpp` (all Principled entries: presets +
+    // Shell0..Shell11).
+    static Scene makeDisneyPrincipledGalleryScene();
+
+    // Minimal Mitsuba XML subset loader. The first supported target is
+    // assets/disney_bsdf_array.xml: disneybsdf/diffuse materials, serialized
+    // matpreview shapes approximated with simple GPU meshes, and envmap
+    // emitters approximated with a large quad light.
+    static Scene loadMitsubaXml(const std::string &path);
   };
 
 } // namespace mypt

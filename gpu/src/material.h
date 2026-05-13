@@ -19,6 +19,7 @@ enum MaterialKind : int {
   MATERIAL_DIELECTRIC,
   MATERIAL_CONDUCTOR,
   MATERIAL_THIN_DIELECTRIC,
+  MATERIAL_DISNEY_PRINCIPLED,
   MATERIAL_EMISSIVE,
 };
 
@@ -26,6 +27,7 @@ struct MaterialGPU {
   int    kind;           // MaterialKind
   vec3f  albedo;         // lambertian / mirror base color
   vec3f  emission;       // emissive radiance
+  vec3f  baseColor;      // Disney principled base color
   vec3f  eta;            // conductor RGB eta
   vec3f  k;              // conductor RGB absorption
   float  ior;            // dielectric index of refraction
@@ -33,4 +35,14 @@ struct MaterialGPU {
   float  alpha_x;        // microfacet roughness in tangent direction
   float  alpha_y;        // microfacet roughness in bitangent direction
   int    thinUseSplitRay; // reserved for future split-ray thin dielectric
+  float  specularTransmission;
+  float  metallic;
+  float  subsurface;
+  float  specular;
+  float  specularTint;
+  float  anisotropic;
+  float  sheen;
+  float  sheenTint;
+  float  clearcoat;
+  float  clearcoatGloss;
 };
