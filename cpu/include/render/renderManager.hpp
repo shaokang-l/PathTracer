@@ -15,6 +15,7 @@
 #include "utils/timeit.hpp"
 #include "base/lightDiscovery.hpp"
 #include "light/envLight.hpp"
+#include <atomic>
 
 #ifdef USE_ANALYTICAL_ILLUMIN
 #include "integrator/analytical_illumin.hpp"
@@ -82,7 +83,7 @@ struct SceneInfo
 
     FrameBuffer fb(_width, _height, spp_x, spp_y);
     auto offsets = fb.getOffsets();
-    uint counter = 0;
+    std::atomic<uint> counter{0};
 
     // light discovery
     LightList discovered_lights = discover_emissive_objects_as_lights(objects);
@@ -94,26 +95,43 @@ struct SceneInfo
       discovered_lights.addLight(environment_light);
     }
 
-#pragma omp parallel for
-    for (int i = 0; i < _width; i++)
+    #pragma omp parallel for schedule(dynamic, 1)
+    for (int y = 0; y < _height; y++)
     {
 
       if (show_progress)
-        std::cout << "Now scanning " << (float(counter) / _width) * 100.f
-                  << " %" << std::endl;
+      {
+        uint localCounter = counter.load(std::memory_order_relaxed);
 
-        for (int j = 0; j < _height; j++)
+        if (localCounter % 16 == 0)
         {
-          auto color = vec3(0.0);
-
-          // per sample
-          for (int k = 0; k < fb.getSampleCount(); k++)
+          #pragma omp critical
           {
+            std::cout << "Progress: " << 100.0f * localCounter / _height
+                      << "%\n";
+          }
+        }
+      }
 
-            // per sample, reset sampler
-            halton_sampler.startSample();
+      for (int x = 0; x < _width; x++)
+      {
+        auto color = vec3(0.0);
+
+        // per sample
+        for (int k = 0; k < fb.getSampleCount(); k++)
+        {
+
+            const uint64_t sample_id =
+                (uint64_t(y) * uint64_t(_width) + uint64_t(x)) *
+                    uint64_t(fb.getSampleCount()) +
+                uint64_t(k);
+
+            // Per pixel/sample deterministic state. This keeps CPU reference
+            // renders stable regardless of OpenMP scheduling.
+            gl::seed_rand(sample_id + 1u);
+            halton_sampler.startSample(static_cast<std::uint32_t>(sample_id + 1u));
             auto sample_color = vec3(0.0);
-            vec2 uv = (vec2(i, j) + offsets[k]) / vec2(_width, _height);
+            vec2 uv = (vec2(x, y) + offsets[k]) / vec2(_width, _height);
             Ray ray = camera->generateRay(uv.u(), uv.v());
 
 #ifdef USE_ANALYTICAL_ILLUMIN
@@ -140,16 +158,16 @@ struct SceneInfo
             std::runtime_error(
                 "No method selected! Please define a method in the config.hpp");
 #endif
-          }
-
-          // average color
-          {
-            color /= fb.getSampleCount();
-            fb.setPixelColor(j, i, color);
-          }
         }
 
-      counter++;
+        // average color
+        {
+          color /= fb.getSampleCount();
+          fb.setPixelColor(y, x, color);
+        }
+      }
+
+      counter.fetch_add(1, std::memory_order_relaxed);
     }
 
     fb.writeToFile(out_path, GAMMA);

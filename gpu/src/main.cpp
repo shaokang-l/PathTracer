@@ -47,9 +47,10 @@ namespace {
         if (name == "disney-cornell") return mypt::Scene::makeDisneyCornellScene();
         if (name == "disney-gallery")
           return mypt::Scene::makeDisneyPrincipledGalleryScene();
+        if (name == "disney-lab") return mypt::Scene::makeDisneyMaterialLabScene();
       }
     }
-    return mypt::Scene::makeTestScene();
+    return mypt::Scene::makeDisneyMaterialLabScene();
   }
 }
 

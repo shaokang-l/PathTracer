@@ -36,6 +36,13 @@ public:
     dimension_ = 0;
   }
 
+  // Deterministic variant used by parallel render loops. It avoids depending
+  // on OpenMP scheduling order when assigning Halton sample indices.
+  void startSample(std::uint32_t sampleIndex) {
+    sampleIndex_ = sampleIndex;
+    dimension_ = 0;
+  }
+
   // One‑dimensional component
   float get1D() override { return SampleDimension(dimension_++); }
 

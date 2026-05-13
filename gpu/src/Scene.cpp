@@ -576,6 +576,19 @@ namespace mypt {
     return v;
   }
 
+  static void boostDisneyTransmissionForLab(MaterialGPU &m)
+  {
+    if (m.kind != MATERIAL_DISNEY_PRINCIPLED) return;
+
+    // The CPU presets are mostly metallic/clearcoat/sheen tests. For the lab
+    // scene, bias the copied presets toward visible glass so transmission can
+    // be inspected without changing the original preset definitions.
+    m.metallic = fminf(m.metallic, 0.65f);
+    const float currentGlassWeight = (1.f - m.metallic) * m.specularTransmission;
+    const float targetGlassWeight = fmaxf(currentGlassWeight, 0.28f);
+    m.specularTransmission = fminf(1.f, targetGlassWeight / fmaxf(1e-4f, 1.f - m.metallic));
+  }
+
   Scene Scene::makeDisneyPrincipledGalleryScene()
   {
     using owl::vec3f;
@@ -649,6 +662,128 @@ namespace mypt {
     quadLight.normal = vec3f(0.f, -1.f, 0.f);
     quadLight.area = 64.f;
     s.lights.push_back(quadLight);
+
+    s.computeBounds();
+    return s;
+  }
+
+  Scene Scene::makeDisneyMaterialLabScene()
+  {
+    using owl::vec3f;
+    Scene s;
+
+    s.materials.push_back(makeLambertian(vec3f(0.025f, 0.025f, 0.03f))); // dark studio floor/backdrop
+    s.materials.push_back(makeLambertian(vec3f(0.18f, 0.18f, 0.19f)));   // neutral pedestals
+    s.materials.push_back(makeEmissive(vec3f(18.f, 16.f, 13.f)));        // warm key softbox
+    s.materials.push_back(makeEmissive(vec3f(3.0f, 3.8f, 5.2f)));        // cool fill softbox
+    s.materials.push_back(makeEmissive(vec3f(8.f, 8.f, 10.f)));          // rim light
+    s.materials.push_back(makeDielectric(1.5f, 0.08f));                  // glossy dielectric backdrop
+    s.materials.push_back(makeConductor(vec3f(0.04f, 0.06f, 0.04f),
+                                        vec3f(4.8f, 3.586f, 2.657f),
+                                        0.12f));                         // glossy rough metal backdrop
+
+    std::vector<MaterialGPU> disneyMats = disneyPrincipledPresetsFromCommonMaterials();
+    for (MaterialGPU &m : disneyMats) {
+      boostDisneyTransmissionForLab(m);
+    }
+    const int32_t disneyMatBase = int32_t(s.materials.size());
+    for (auto &m : disneyMats) {
+      s.materials.push_back(std::move(m));
+    }
+
+    TriangleMesh floor;
+    floor.materialId = 0;
+    pushBox(floor, vec3f(-16.f, -0.58f, -9.f), vec3f(16.f, -0.5f, 12.f));
+    s.meshes.push_back(std::move(floor));
+
+    TriangleMesh dielectricBackdrop;
+    dielectricBackdrop.materialId = 5;
+    pushBox(dielectricBackdrop, vec3f(-16.f, -0.6f, 7.2f), vec3f(0.f, 8.5f, 7.32f));
+    s.meshes.push_back(std::move(dielectricBackdrop));
+
+    TriangleMesh metalBackdrop;
+    metalBackdrop.materialId = 6;
+    pushBox(metalBackdrop, vec3f(0.f, -0.6f, 7.2f), vec3f(16.f, 8.5f, 7.32f));
+    s.meshes.push_back(std::move(metalBackdrop));
+
+    TriangleMesh sideWall;
+    sideWall.materialId = 0;
+    pushBox(sideWall, vec3f(-16.2f, -0.6f, -9.f), vec3f(-16.f, 7.f, 7.3f));
+    s.meshes.push_back(std::move(sideWall));
+
+    const ObjData bunnyObj = loadObjData(std::string(PATHTRACER_ASSET_DIR) + "/bunny.obj");
+    const int n = int(disneyMats.size());
+    const float radius = 10.5f;
+    const float angleMin = -1.15f;
+    const float angleMax = 1.15f;
+    const float baseY = -0.18f;
+
+    for (int i = 0; i < n; ++i) {
+      const float t = n > 1 ? float(i) / float(n - 1) : 0.f;
+      const float a = angleMin + (angleMax - angleMin) * t;
+      const float x = std::sin(a) * radius;
+      const float z = -2.6f + (1.f - std::cos(a)) * 4.2f;
+
+      TriangleMesh pedestal;
+      pedestal.materialId = 1;
+      const float pedestalHalf = (i % 2 == 0) ? 0.62f : 0.54f;
+      const float pedestalTop = (i % 3 == 0) ? -0.08f : -0.16f;
+      pushBox(pedestal,
+              vec3f(x - pedestalHalf, -0.5f, z - pedestalHalf),
+              vec3f(x + pedestalHalf, pedestalTop, z + pedestalHalf));
+      s.meshes.push_back(std::move(pedestal));
+
+      s.meshes.push_back(makeMeshFromObjData(bunnyObj,
+                                             disneyMatBase + i,
+                                             17.5f,
+                                             float(M_PI_2) - a * 0.35f,
+                                             vec3f(x, baseY, z)));
+    }
+
+    TriangleMesh keyLight;
+    keyLight.materialId = 2;
+    pushBox(keyLight, vec3f(-9.5f, 4.2f, -4.5f), vec3f(-9.2f, 9.0f, 2.5f));
+    s.meshes.push_back(std::move(keyLight));
+
+    TriangleMesh fillLight;
+    fillLight.materialId = 3;
+    pushBox(fillLight, vec3f(9.0f, 2.8f, -2.5f), vec3f(9.25f, 6.8f, 4.2f));
+    s.meshes.push_back(std::move(fillLight));
+
+    TriangleMesh rimLight;
+    rimLight.materialId = 4;
+    pushBox(rimLight, vec3f(-4.2f, 6.7f, 5.6f), vec3f(4.2f, 7.0f, 5.9f));
+    s.meshes.push_back(std::move(rimLight));
+
+    LightGPU key;
+    key.kind = LIGHT_QUAD;
+    key.emission = s.materials[2].emission;
+    key.v0 = vec3f(-9.2f, 4.2f, -4.5f);
+    key.edgeU = vec3f(0.f, 4.8f, 0.f);
+    key.edgeV = vec3f(0.f, 0.f, 7.f);
+    key.normal = normalizeVec(vec3f(1.f, -0.2f, -0.15f));
+    key.area = owl::length(key.edgeU) * owl::length(key.edgeV);
+    s.lights.push_back(key);
+
+    LightGPU fill;
+    fill.kind = LIGHT_QUAD;
+    fill.emission = s.materials[3].emission;
+    fill.v0 = vec3f(9.0f, 2.8f, -2.5f);
+    fill.edgeU = vec3f(0.f, 4.f, 0.f);
+    fill.edgeV = vec3f(0.f, 0.f, 6.7f);
+    fill.normal = normalizeVec(vec3f(-1.f, -0.2f, -0.1f));
+    fill.area = owl::length(fill.edgeU) * owl::length(fill.edgeV);
+    s.lights.push_back(fill);
+
+    LightGPU rim;
+    rim.kind = LIGHT_QUAD;
+    rim.emission = s.materials[4].emission;
+    rim.v0 = vec3f(-4.2f, 6.7f, 5.6f);
+    rim.edgeU = vec3f(8.4f, 0.f, 0.f);
+    rim.edgeV = vec3f(0.f, 0.3f, 0.f);
+    rim.normal = normalizeVec(vec3f(0.f, -0.35f, -1.f));
+    rim.area = owl::length(rim.edgeU) * owl::length(rim.edgeV);
+    s.lights.push_back(rim);
 
     s.computeBounds();
     return s;

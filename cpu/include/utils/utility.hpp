@@ -5,8 +5,11 @@
 #include "./transformations.hpp"
 #include <chrono>
 #include <complex>
+#include <cstdint>
 #include <float.h>
+#include <functional>
 #include <random>
+#include <thread>
 #include <type_traits>
 
 template <typename E>
@@ -537,11 +540,29 @@ namespace gl
     return all_neg || all_pos;
   }
 
-  static std::random_device
-      rd; // Will be used to obtain a seed for the random number engine
-  static std::mt19937
-      gen(rd()); // Standard mersenne_twister_engine seeded with rd()
-  static std::uniform_real_distribution<> dist(0, 1);
+  inline uint32_t randomThreadSeed()
+  {
+    const auto tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
+    return static_cast<uint32_t>(0x9e3779b9u ^ tid);
+  }
+
+  inline uint32_t mixSeed(uint64_t v)
+  {
+    v += 0x9e3779b97f4a7c15ull;
+    v = (v ^ (v >> 30)) * 0xbf58476d1ce4e5b9ull;
+    v = (v ^ (v >> 27)) * 0x94d049bb133111ebull;
+    v = v ^ (v >> 31);
+    return static_cast<uint32_t>(v);
+  }
+
+  inline thread_local std::mt19937 gen(randomThreadSeed());
+  inline thread_local std::uniform_real_distribution<float> dist(0.f, 1.f);
+
+  inline void seed_rand(uint64_t seed)
+  {
+    gen.seed(mixSeed(seed));
+    dist.reset();
+  }
 
   // random number from 0 to 1
   static float rand_num() { return dist(gen); }

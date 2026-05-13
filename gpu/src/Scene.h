@@ -55,6 +55,11 @@ namespace mypt {
     // Shell0..Shell11).
     static Scene makeDisneyPrincipledGalleryScene();
 
+    // Studio material lab / turntable-style Disney showcase: all Disney
+    // Principled presets on small pedestals, arranged in a shallow arc under
+    // large softbox-style area lights.
+    static Scene makeDisneyMaterialLabScene();
+
     // Minimal Mitsuba XML subset loader. The first supported target is
     // assets/disney_bsdf_array.xml: disneybsdf/diffuse materials, serialized
     // matpreview shapes approximated with simple GPU meshes, and envmap

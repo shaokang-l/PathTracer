@@ -7,23 +7,41 @@ class Ray
 {
 public:
   Ray(const gl::vec3 &origin, const gl::vec3 &direction, float intensity = 1.0f, const std::shared_ptr<Medium> medium = nullptr)
-      : origin(origin), direction(direction), intensity(intensity), current_medium(medium) {};
+      : origin(origin), direction(direction), intensity(intensity), current_medium(medium)
+  {
+    updateDirectionCache();
+  };
   ~Ray() = default;
   Ray() = default;
 
   void setOrigin(const gl::vec3 &origin) { this->origin = origin; };
 
-  void setDirection(const gl::vec3 &direction) { this->direction = direction; };
+  void setDirection(const gl::vec3 &direction)
+  {
+    this->direction = direction;
+    updateDirectionCache();
+  };
 
-  gl::vec3 getOrigin() const { return this->origin; };
+  const gl::vec3 &getOrigin() const { return this->origin; };
 
-  gl::vec3 getDirection() const { return this->direction; };
+  const gl::vec3 &getDirection() const { return this->direction; };
+
+  const gl::vec3 &getInvDirection() const { return this->inv_direction; };
 
   gl::vec3 at(float t) const { return this->origin + t * this->direction; };
 
   float intensity = 1.0f;
 
+  void updateDirectionCache()
+  {
+    inv_direction = gl::vec3(
+        1.0f / direction.x(),
+        1.0f / direction.y(),
+        1.0f / direction.z());
+  }
+
   std::shared_ptr<Medium> current_medium;
   gl::vec3 origin;
   gl::vec3 direction;
+  gl::vec3 inv_direction;
 };
