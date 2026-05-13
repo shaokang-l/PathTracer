@@ -1,0 +1,65 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 19,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "cpu-debug",
+      "displayName": "CPU Debug",
+      "description": "Build only the CPU path tracer into build-cpu.",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build-cpu",
+      "cacheVariables": {
+        "PATHTRACER_BUILD_CPU": "ON",
+        "PATHTRACER_BUILD_GPU": "OFF"
+      }
+    },
+    {
+      "name": "gpu-debug",
+      "displayName": "GPU Debug",
+      "description": "Build only the OWL/OptiX GPU renderer into build-gpu.",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build-gpu",
+      "cacheVariables": {
+        "PATHTRACER_BUILD_CPU": "OFF",
+        "PATHTRACER_BUILD_GPU": "ON"
+      }
+    },
+    {
+      "name": "clangd-gpu",
+      "displayName": "clangd GPU compile database",
+      "description": "Ninja configure used only to generate compile_commands.json for clangd.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-clangd",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "PATHTRACER_BUILD_CPU": "OFF",
+        "PATHTRACER_BUILD_GPU": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "cpu-debug",
+      "displayName": "CPU Debug",
+      "configurePreset": "cpu-debug",
+      "configuration": "Debug",
+      "targets": [
+        "pathtracer_app"
+      ]
+    },
+    {
+      "name": "gpu-debug",
+      "displayName": "GPU Debug",
+      "configurePreset": "gpu-debug",
+      "configuration": "Debug",
+      "targets": [
+        "mypt"
+      ]
+    }
+  ]
+}
