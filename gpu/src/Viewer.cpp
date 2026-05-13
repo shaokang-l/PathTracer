@@ -6,6 +6,36 @@
 #include <iostream>
 #include <vector>
 
+namespace {
+
+  const char *debugViewName(pt::DebugViewKind view)
+  {
+    switch (view) {
+    case pt::DebugViewKind::Beauty: return "beauty";
+    case pt::DebugViewKind::Normal: return "normal";
+    case pt::DebugViewKind::Albedo: return "albedo";
+    case pt::DebugViewKind::Visibility: return "visibility";
+    case pt::DebugViewKind::MaterialId: return "material-id";
+    case pt::DebugViewKind::LightId: return "light-id";
+    default: return "unknown";
+    }
+  }
+
+  bool debugViewFromKey(char key, pt::DebugViewKind &view)
+  {
+    switch (key) {
+    case '1': view = pt::DebugViewKind::Beauty; return true;
+    case '2': view = pt::DebugViewKind::Normal; return true;
+    case '3': view = pt::DebugViewKind::Albedo; return true;
+    case '4': view = pt::DebugViewKind::Visibility; return true;
+    case '5': view = pt::DebugViewKind::MaterialId; return true;
+    case '6': view = pt::DebugViewKind::LightId; return true;
+    default: return false;
+    }
+  }
+
+} // namespace
+
 namespace mypt {
 
   Viewer::Viewer(Renderer &renderer,
@@ -50,6 +80,13 @@ namespace mypt {
 
   void Viewer::key(char k, const owl::vec2i &where)
   {
+    pt::DebugViewKind debugView = pt::DebugViewKind::Beauty;
+    if (debugViewFromKey(k, debugView)) {
+      renderer_.setDebugView(debugView);
+      std::cout << "[mypt] debug view: " << debugViewName(debugView) << std::endl;
+      return;
+    }
+
     switch (k) {
     case '+': case '=':
       std::cerr << "[mypt] (key) not yet bound to spp/bounces" << std::endl;
