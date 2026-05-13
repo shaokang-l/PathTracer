@@ -40,6 +40,9 @@ The project has two renderer backends:
   light, sampler, and volume systems.
 * `gpu/` is an experimental OWL/OptiX backend used to port the renderer to
   CUDA/RT cores incrementally.
+* `common/` contains a small host/device math layer shared by both backends
+  for formulas that are worth keeping numerically consistent, such as
+  Fresnel and Trowbridge-Reitz/GGX microfacet helpers.
 
 The GPU backend currently favors a clear architecture over premature kernel
 specialization. OptiX closest-hit programs build a compact PRD, raygen owns the
@@ -56,38 +59,78 @@ radiance trace
 
 The SBT currently stores geometry buffers plus `materialId`; per-frame data,
 materials, and lights live in launch params / device buffers so they can be
-updated without rebuilding the SBT. Per-material closest-hit programs and
-wavefront scheduling are intentionally deferred until profiling shows that
-material dispatch or raygen kernel size is a real bottleneck.
+updated without rebuilding the SBT. GPU materials are a flat tagged POD
+(`MaterialGPU`) with BxDF dispatch for Lambertian, mirror, conductor,
+microfacet dielectric, thin dielectric, and emissive surfaces. Per-material
+closest-hit programs, TLAS instancing for repeated meshes, and wavefront
+scheduling are intentionally deferred until profiling shows that they are the
+next bottleneck.
+
+The GPU backend also has a host-side OptiX denoiser pass. Raygen writes a
+linear HDR accumulator; post-processing optionally denoises that buffer, then
+tone maps to the OWLViewer framebuffer:
+
+```text
+OptiX raygen -> linear HDR accumBuffer -> optional OptiX denoiser
+             -> CUDA tonemap/gamma/pack -> GL-shared framebuffer
+```
+
+For interactive use the denoiser is delayed until enough accumulated samples
+are available and is only refreshed every few frames, so camera interaction
+does not pay the denoiser cost on every launch.
 
 ## Build Instructions:
 
-This project uses CMake to build and is correctly built under M1 macOS environment. The C++ standard is set to C++ 20.
+This project uses CMake. The root project defaults to CPU-only builds; the GPU
+backend is enabled explicitly because it depends on CUDA, OptiX, OWL, GLFW, and
+OpenGL. The root C++ standard is C++20, while the GPU subproject is forced to
+C++17 for CUDA 11.x compatibility.
 
-Once CMake is installed, use below commands to build with CMake.
+The recommended workflow is to use the checked-in presets, which keep CPU and
+GPU build trees separate:
 
-This project uses OpenMP for parallelization, for ARM Mac users, please refer to this [post](https://stackoverflow.com/questions/71061894/how-to-install-openmp-on-mac-m1).
+```powershell
+# CPU renderer, RelWithDebInfo
+cmake --preset cpu-relwithdebinfo
+cmake --build --preset cpu-relwithdebinfo
 
-Add GL_SIMD to compile definition to enable SIMD (for vec and matrix class).
-
-```
-mkdir build
-cd build
-cmake ..
-make .
-```
-
-* Unit tests are under `/tests` folder using `GTest` framework.
-
-The GPU backend is optional and is disabled by default:
-
-```bash
-cmake -S . -B build -DPATHTRACER_BUILD_GPU=ON
-cmake --build build --target mypt --config Release
+# GPU renderer, RelWithDebInfo, Ninja
+cmake --preset gpu-ninja-relwithdebinfo
+cmake --build --preset gpu-ninja-relwithdebinfo
 ```
 
-When profiling the GPU backend, `mypt` also accepts `--frames N` so external
-profilers can run a deterministic number of frames and exit.
+The generated executables are:
+
+```text
+build-cpu/cpu/src/RelWithDebInfo/PathTracer.exe
+build-gpu-ninja/gpu/mypt.exe
+```
+
+There is also a Visual Studio generator preset for the GPU backend:
+
+```powershell
+cmake --preset gpu-relwithdebinfo
+cmake --build --preset gpu-relwithdebinfo
+```
+
+For Cursor/CMake Tools, the workspace defaults to the Ninja GPU preset. This
+avoids the Visual Studio generator's lowercase `all` target issue in the CMake
+Tools build button. A separate `clangd-gpu` preset generates
+`build-clangd/compile_commands.json` for clangd.
+
+Unit tests are under `cpu/tests` and use GoogleTest. To run them from a CPU
+build tree:
+
+```powershell
+ctest --test-dir build-cpu --output-on-failure -C RelWithDebInfo
+```
+
+When profiling the GPU backend, `mypt` accepts `--frames N` so external
+profilers can run a deterministic number of frames and exit:
+
+```powershell
+.\build-gpu-ninja\gpu\mypt.exe --frames 120
+```
 
 
 
@@ -111,15 +154,32 @@ The path tracer supports DoF, motion blur. Image filtering and tone-mapping.
 
 ### Materials:
 
+CPU backend:
+
 1. Marschner Hair
 2. Phong
 3. Dielectric (Microfacet BxDF + simple dispersion approximation)
-   * Thin Dielectric 
-   * This branch introduces a split-ray variant for noise reduction.
+   * Thin Dielectric
+   * Split-ray variant for noise reduction.
 4. Conductor (Microfacet BRDF, VNDF)
 5. Lambertian
 6. Kajiya-Kay
-7. Disney Principled BSDF (A mix of 2015 / 2012 impl.)
+7. Disney Principled BSDF (a mix of 2015 / 2012 implementation details)
+
+GPU backend:
+
+1. Lambertian
+2. Mirror
+3. Conductor (smooth and rough microfacet)
+4. Dielectric (smooth and rough microfacet)
+5. Thin Dielectric
+6. Emissive quads
+
+The shared `common/` math layer currently covers Fresnel dielectric,
+conductor Fresnel without `std::complex`, local-frame helpers, and
+Trowbridge-Reitz/GGX distribution and sampling. The CPU backend keeps its
+`gl::vec3` and virtual material hierarchy; shared code is used through thin
+adapters rather than replacing the CPU data model wholesale.
 
 
 
@@ -128,6 +188,12 @@ The path tracer supports DoF, motion blur. Image filtering and tone-mapping.
 1. .obj
 2. .fbx (WIP)
 
+The current GPU test scene loads `assets/bunny.obj` once and instantiates
+several material variants of the bunny: lambertian, glass, thin glass, gold,
+rough gold, and silver. This is still represented as separate mesh uploads;
+moving repeated meshes to a shared BLAS plus TLAS instances is a planned next
+step.
+
 
 
 ### Light
@@ -135,6 +201,9 @@ The path tracer supports DoF, motion blur. Image filtering and tone-mapping.
 * Area light
 * Sphere light
 * HDRI (IBL)
+
+The GPU backend currently supports quad area lights. CPU-only light types such
+as sphere lights and HDRI are not yet ported.
 
 
 
