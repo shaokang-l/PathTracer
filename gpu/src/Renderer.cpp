@@ -251,9 +251,17 @@ namespace mypt {
     const auto *hdrIn = accumBuffer_
       ? static_cast<const float4 *>(owlBufferGetPointer(accumBuffer_, 0))
       : nullptr;
+
     if (hdrIn && fbPtr_) {
       const CUstream stream = owlContextGetStream(ctx_, 0);
-      launchTonemap(hdrIn, fbPtr_, fbSize_.x, fbSize_.y, stream);
+      const float4 *displayHdr = hdrIn;
+      const int accumulatedSpp = (accumID_ + 1) * samplesPerPixel_;
+
+      if (denoiserEnabled_ && accumulatedSpp >= denoiserMinAccumulatedSpp_) {
+        displayHdr = denoiser_.denoise(hdrIn, fbSize_.x, fbSize_.y, stream);
+      }
+
+      launchTonemap(displayHdr, fbPtr_, fbSize_.x, fbSize_.y, stream);
     }
 
     cudaEventRecord(eventEnd_,   /*stream=*/0);

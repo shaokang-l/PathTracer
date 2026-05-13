@@ -54,6 +54,7 @@ embed_ptx(
 
 add_executable(mypt
   src/main.cpp
+  src/Denoiser.cpp
   src/Renderer.cpp
   src/Scene.cpp
   src/Viewer.cpp
@@ -68,7 +69,16 @@ set_target_properties(mypt PROPERTIES
   CUDA_SEPARABLE_COMPILATION ON
 )
 
-target_include_directories(mypt PRIVATE src)
+target_include_directories(mypt
+  PRIVATE
+    src
+    ${CMAKE_SOURCE_DIR}/cpu/include
+)
+
+target_compile_definitions(mypt
+  PRIVATE
+    PATHTRACER_ASSET_DIR="${CMAKE_SOURCE_DIR}/assets"
+)
 
 target_link_libraries(mypt
   PRIVATE

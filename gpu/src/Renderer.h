@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "Denoiser.h"
 #include "Scene.h"
 
 #include <owl/owl.h>
@@ -98,6 +99,9 @@ namespace mypt {
     OWLBuffer        accumBuffer_   = nullptr;
     OWLBuffer        materialBuffer_ = nullptr;
     OWLBuffer        lightBuffer_    = nullptr;
+    Denoiser         denoiser_;
+    bool             denoiserEnabled_ = true;
+    int              denoiserMinAccumulatedSpp_ = 4;
     int              lightCount_     = 0;
 
     owl::vec2i       fbSize_        = { 0, 0 };
