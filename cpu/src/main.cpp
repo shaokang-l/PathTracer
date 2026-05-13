@@ -171,6 +171,7 @@ int main(int argc, char **argv)
   }
   scene.max_depth = static_cast<uint>(settings.maxDepth);
   scene._gamma = settings.gamma;
+  scene.debug_view = settings.debugView;
   scene.bg_color = gl::vec3(settings.background.x, settings.background.y, settings.background.z);
   if (settings.hasCameraOverride)
   {

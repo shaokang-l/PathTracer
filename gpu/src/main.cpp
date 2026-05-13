@@ -216,6 +216,7 @@ int main(int argc, char **argv)
   renderer.setMissColor(owl::vec3f(settings.background.x,
                                    settings.background.y,
                                    settings.background.z));
+  renderer.setDebugView(settings.debugView);
   renderer.setOutputTransform(settings.gamma, settings.toneMap == pt::ToneMapKind::Reinhard);
   renderer.setScene(scene);
 

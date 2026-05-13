@@ -15,6 +15,15 @@ enum class ToneMapKind {
   Reinhard,
 };
 
+enum class DebugViewKind {
+  Beauty = 0,
+  Normal,
+  Albedo,
+  Visibility,
+  MaterialId,
+  LightId,
+};
+
 struct RenderSettings {
   int width = 64;
   int height = 64;
@@ -22,6 +31,7 @@ struct RenderSettings {
   int maxDepth = 4;
   float gamma = 2.2f;
   ToneMapKind toneMap = ToneMapKind::Clamp;
+  DebugViewKind debugView = DebugViewKind::Beauty;
   Vec3f background = Vec3f(0.f);
 
   bool hasCameraOverride = false;
@@ -100,6 +110,21 @@ inline RenderSettings parseRenderSettings(int argc, char **argv, const RenderSet
 
   const std::string_view toneMap = parseStringArg(argc, argv, "--tonemap", "clamp");
   settings.toneMap = toneMap == "reinhard" ? ToneMapKind::Reinhard : ToneMapKind::Clamp;
+
+  const std::string_view debugView = parseStringArg(argc, argv, "--debug-view", "beauty");
+  if (debugView == "normal") {
+    settings.debugView = DebugViewKind::Normal;
+  } else if (debugView == "albedo") {
+    settings.debugView = DebugViewKind::Albedo;
+  } else if (debugView == "visibility") {
+    settings.debugView = DebugViewKind::Visibility;
+  } else if (debugView == "material-id" || debugView == "material_id") {
+    settings.debugView = DebugViewKind::MaterialId;
+  } else if (debugView == "light-id" || debugView == "light_id") {
+    settings.debugView = DebugViewKind::LightId;
+  } else {
+    settings.debugView = DebugViewKind::Beauty;
+  }
 
   settings.hasCameraOverride =
     hasArg(argc, argv, "--camera-origin") || hasArg(argc, argv, "--camera-target");

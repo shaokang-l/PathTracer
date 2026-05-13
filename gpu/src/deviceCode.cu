@@ -48,6 +48,15 @@ struct PRD {
 struct ShadowPRD {
   vec3f transmittance;
 };
+
+enum DebugView : int {
+  DEBUG_VIEW_BEAUTY = 0,
+  DEBUG_VIEW_NORMAL = 1,
+  DEBUG_VIEW_ALBEDO = 2,
+  DEBUG_VIEW_VISIBILITY = 3,
+  DEBUG_VIEW_MATERIAL_ID = 4,
+  DEBUG_VIEW_LIGHT_ID = 5,
+};
 // ---------------
 // ---------------------------------------------------
 // Closest-hit: fill the PRD. All shading / next-event logic lives in
@@ -139,6 +148,64 @@ __device__ inline vec3f traceVisibility(OptixTraversableHandle world,
   return prd.transmittance;
 }
 
+__device__ inline vec3f hashColor(int id)
+{
+  unsigned int x = unsigned(id + 1) * 747796405u + 2891336453u;
+  x = ((x >> ((x >> 28u) + 4u)) ^ x) * 277803737u;
+  x = (x >> 22u) ^ x;
+  const float r = float((x >> 0u) & 255u) / 255.f;
+  const float g = float((x >> 8u) & 255u) / 255.f;
+  const float b = float((x >> 16u) & 255u) / 255.f;
+  return vec3f(r, g, b);
+}
+
+__device__ inline vec3f materialDebugAlbedo(const MaterialGPU &material)
+{
+  if (material.kind == MATERIAL_EMISSIVE) return material.emission;
+  if (material.kind == MATERIAL_DISNEY_PRINCIPLED) return material.baseColor;
+  return material.albedo;
+}
+
+__device__ inline vec3f shadeDebugView(const LaunchParams &params,
+                                       const PRD &prd)
+{
+  if (!prd.didHit) return prd.emission;
+
+  if (params.debugView == DEBUG_VIEW_NORMAL) {
+    return 0.5f * (prd.N + vec3f(1.f));
+  }
+
+  const MaterialGPU &material = params.materials[prd.materialId];
+  if (params.debugView == DEBUG_VIEW_ALBEDO) {
+    return materialDebugAlbedo(material);
+  }
+
+  if (params.debugView == DEBUG_VIEW_MATERIAL_ID) {
+    return hashColor(prd.materialId);
+  }
+
+  if (params.debugView == DEBUG_VIEW_VISIBILITY ||
+      params.debugView == DEBUG_VIEW_LIGHT_ID) {
+    LightSample lightSample;
+    const int lightID = params.lightCount > 0 ? 0 : -1;
+    if (sampleLight(params.lights,
+                    params.lightCount,
+                    0.f,
+                    vec2f(0.5f, 0.5f),
+                    lightSample)) {
+      const vec3f V = traceVisibility(params.world, prd.hitP, lightSample.p);
+      const float visible = fmaxf(V.x, fmaxf(V.y, V.z));
+      if (params.debugView == DEBUG_VIEW_LIGHT_ID) {
+        return visible > 0.f ? hashColor(lightID) : vec3f(0.f);
+      }
+      return vec3f(visible);
+    }
+    return vec3f(0.f);
+  }
+
+  return vec3f(0.f);
+}
+
 // ------------------------------------------------------------------
 // RayGen: path-tracing loop. Iterative (never recursive).
 // ------------------------------------------------------------------
@@ -151,16 +218,26 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
   RNG rng(pxIdx, params.accumID + 1);
 
   vec3f L = vec3f(0.f);
-  const int spp = params.samplesPerPixel;
+  const bool debugMode = params.debugView != DEBUG_VIEW_BEAUTY;
+  const int spp = debugMode ? 1 : params.samplesPerPixel;
 
   for (int s = 0; s < spp; ++s) {
-    const vec2f jitter(rng(), rng());
+    const vec2f jitter = debugMode ? vec2f(0.5f) : vec2f(rng(), rng());
     const vec2f screen = (vec2f(pixelID) + jitter) / vec2f(params.fbSize);
 
     vec3f rayOrigin = params.camera.pos;
     vec3f rayDir    = normalize(params.camera.dir_00
                                 + screen.x * params.camera.dir_du
                                 + screen.y * params.camera.dir_dv);
+
+    if (debugMode) {
+      PRD prd;
+      prd.didHit = false;
+      RadianceRay ray(rayOrigin, rayDir, 1e-3f, 1e20f);
+      owl::traceRay(params.world, ray, prd);
+      L = L + shadeDebugView(params, prd);
+      continue;
+    }
 
     vec3f throughput = vec3f(1.f);
     vec3f radiance   = vec3f(0.f);

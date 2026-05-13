@@ -88,6 +88,7 @@ namespace mypt {
       { "accumID",        OWL_INT,         OWL_OFFSETOF(LaunchParams, accumID)        },
       { "samplesPerPixel",OWL_INT,         OWL_OFFSETOF(LaunchParams, samplesPerPixel)},
       { "maxBounces",     OWL_INT,         OWL_OFFSETOF(LaunchParams, maxBounces)     },
+      { "debugView",      OWL_INT,         OWL_OFFSETOF(LaunchParams, debugView)      },
       { "world",          OWL_GROUP,       OWL_OFFSETOF(LaunchParams, world)          },
       { "camera.pos",     OWL_FLOAT3,      OWL_OFFSETOF(LaunchParams, camera.pos)     },
       { "camera.dir_00",  OWL_FLOAT3,      OWL_OFFSETOF(LaunchParams, camera.dir_00)  },
@@ -201,6 +202,12 @@ namespace mypt {
     resetAccum();
   }
 
+  void Renderer::setDebugView(pt::DebugViewKind view)
+  {
+    debugView_ = view;
+    resetAccum();
+  }
+
   void Renderer::setCamera(const vec3f &from, const vec3f &at,
                            const vec3f &up,   float fovyDeg)
   {
@@ -243,6 +250,7 @@ namespace mypt {
     owlParamsSet1i (lp_, "accumID", accumID_);
     owlParamsSet1i (lp_, "samplesPerPixel", samplesPerPixel_);
     owlParamsSet1i (lp_, "maxBounces", maxBounces_);
+    owlParamsSet1i (lp_, "debugView", static_cast<int>(debugView_));
     owlParamsSet3f (lp_, "camera.pos",    owl3f{ cam_.pos.x,    cam_.pos.y,    cam_.pos.z    });
     owlParamsSet3f (lp_, "camera.dir_00", owl3f{ cam_.dir_00.x, cam_.dir_00.y, cam_.dir_00.z });
     owlParamsSet3f (lp_, "camera.dir_du", owl3f{ cam_.dir_du.x, cam_.dir_du.y, cam_.dir_du.z });
@@ -271,7 +279,8 @@ namespace mypt {
       const float4 *displayHdr = hdrIn;
       const int accumulatedSpp = (accumID_ + 1) * samplesPerPixel_;
 
-      if (denoiserEnabled_ && accumulatedSpp >= denoiserMinAccumulatedSpp_) {
+      if (debugView_ == pt::DebugViewKind::Beauty &&
+          denoiserEnabled_ && accumulatedSpp >= denoiserMinAccumulatedSpp_) {
         const bool shouldUpdateDenoiser =
           ((accumID_ + 1) % denoiserInterval_) == 0 || !denoiser_.output();
 

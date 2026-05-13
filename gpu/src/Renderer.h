@@ -17,6 +17,7 @@
 
 #include "Denoiser.h"
 #include "Scene.h"
+#include "pt/scene/render_settings.h"
 
 #include <owl/owl.h>
 #include <vector>
@@ -56,6 +57,7 @@ namespace mypt {
     void setSamplesPerPixel(int spp) { samplesPerPixel_ = spp; }
     void setMaxBounces(int b)        { maxBounces_      = b;   }
     void setMissColor(const owl::vec3f &color);
+    void setDebugView(pt::DebugViewKind view);
     void setOutputTransform(float gamma, bool useReinhard)
     {
       gamma_ = gamma;
@@ -116,6 +118,7 @@ namespace mypt {
     int              accumID_       = 0;
     int              samplesPerPixel_ = 1;
     int              maxBounces_      = 8;
+    pt::DebugViewKind debugView_      = pt::DebugViewKind::Beauty;
     owl::vec3f       missColor_       = owl::vec3f(0.f);
     float            gamma_           = 2.2f;
     bool             useReinhardTonemap_ = true;

@@ -15,7 +15,9 @@
 #include "utils/timeit.hpp"
 #include "base/lightDiscovery.hpp"
 #include "light/envLight.hpp"
+#include "pt/scene/render_settings.h"
 #include <atomic>
+#include <unordered_map>
 
 #ifdef USE_ANALYTICAL_ILLUMIN
 #include "integrator/analytical_illumin.hpp"
@@ -47,10 +49,108 @@ struct SceneInfo
   uint spp_y = 2;
   uint max_depth = MAX_RAY_DEPTH;
   float _gamma = 1.0f;
+  pt::DebugViewKind debug_view = pt::DebugViewKind::Beauty;
   std::shared_ptr<Medium> global_medium = nullptr;
   bool use_config_defaults = true;
 
   SceneInfo() = default;
+
+  static gl::vec3 debugHashColor(int id)
+  {
+    uint32_t x = uint32_t(id + 1) * 747796405u + 2891336453u;
+    x = ((x >> ((x >> 28u) + 4u)) ^ x) * 277803737u;
+    x = (x >> 22u) ^ x;
+    return gl::vec3(float((x >> 0u) & 255u) / 255.f,
+                    float((x >> 8u) & 255u) / 255.f,
+                    float((x >> 16u) & 255u) / 255.f);
+  }
+
+  static gl::vec3 debugAlbedoProbe(const Ray &ray, HitRecord &hit_record)
+  {
+    if (!hit_record.material)
+      return gl::vec3(0.f);
+
+    if (hit_record.material->is_emitter())
+      return hit_record.material->emit(ray, hit_record);
+
+    const gl::vec3 wo = -ray.getDirection().normalize();
+    const gl::vec3 wi = hit_record.normal.normalize();
+    return hit_record.material->f(wo, wi, hit_record) * float(M_PI);
+  }
+
+  static gl::vec3 debugVisibilityProbe(const HitRecord &hit_record,
+                                       const ObjectList &objects,
+                                       const std::shared_ptr<BVHNode> &bvh,
+                                       const LightList &lights,
+                                       pt::DebugViewKind view)
+  {
+    if (lights.size_excluding_env() == 0)
+      return gl::vec3(0.f);
+
+    int light_id = 0;
+    std::shared_ptr<Light> light = nullptr;
+    for (uint64_t i = 0; i < lights.size(); ++i)
+    {
+      if (lights.get(static_cast<int>(i))->type != LightType::ENVIRONMENT_LIGHT)
+      {
+        light_id = static_cast<int>(i);
+        light = lights.get(light_id);
+        break;
+      }
+    }
+    if (!light)
+      return gl::vec3(0.f);
+
+    const gl::vec3 p_light = light->get_sample(0.5f, 0.5f);
+    const gl::vec3 to_light = p_light - hit_record.position;
+    const float dist = to_light.length();
+    if (dist <= 1e-4f)
+      return gl::vec3(0.f);
+
+    Ray shadow_ray(hit_record.position, to_light * (1.0f / dist));
+    HitRecord shadow_hit;
+    const bool occluded = bvh
+      ? bvh->intersect(shadow_ray, shadow_hit, 1e-3f, dist - 1e-3f)
+      : objects.intersect(shadow_ray, shadow_hit, 1e-3f, dist - 1e-3f);
+    if (occluded)
+      return gl::vec3(0.f);
+
+    if (view == pt::DebugViewKind::LightId)
+      return debugHashColor(light_id);
+    return gl::vec3(1.f);
+  }
+
+  gl::vec3 shadeDebugView(const Ray &ray,
+                          const std::unordered_map<const Material *, int> &material_ids,
+                          const LightList &lights) const
+  {
+    HitRecord hit_record;
+    const bool hit = bvh
+      ? bvh->intersect(ray, hit_record, 1e-3f, 1e5f)
+      : objects.intersect(ray, hit_record, 1e-3f, 1e5f);
+
+    if (!hit)
+      return bg_color;
+
+    if (debug_view == pt::DebugViewKind::Normal)
+      return 0.5f * (hit_record.normal.normalize() + gl::vec3(1.f));
+
+    if (debug_view == pt::DebugViewKind::Albedo)
+      return debugAlbedoProbe(ray, hit_record);
+
+    if (debug_view == pt::DebugViewKind::MaterialId)
+    {
+      const auto it = material_ids.find(hit_record.material.get());
+      return debugHashColor(it == material_ids.end() ? 0 : it->second);
+    }
+
+    if (debug_view == pt::DebugViewKind::Visibility ||
+        debug_view == pt::DebugViewKind::LightId)
+      return debugVisibilityProbe(hit_record, objects, bvh, lights, debug_view);
+
+    return gl::vec3(0.f);
+  }
+
   void render(const std::string &out_path = "./output.png",
               bool show_progress = true)
   {
@@ -101,6 +201,17 @@ struct SceneInfo
       discovered_lights.addLight(environment_light);
     }
 
+    std::unordered_map<const Material *, int> material_ids;
+    int next_material_id = 0;
+    for (const auto &object : objects.getLists())
+    {
+      const std::shared_ptr<Material> material = object->get_material();
+      if (material && material_ids.find(material.get()) == material_ids.end())
+      {
+        material_ids.emplace(material.get(), next_material_id++);
+      }
+    }
+
     #pragma omp parallel for schedule(dynamic, 1)
     for (int y = 0; y < _height; y++)
     {
@@ -122,6 +233,14 @@ struct SceneInfo
       for (int x = 0; x < _width; x++)
       {
         auto color = vec3(0.0);
+
+        if (debug_view != pt::DebugViewKind::Beauty)
+        {
+          vec2 uv = (vec2(x, y) + vec2(0.5f)) / vec2(_width, _height);
+          Ray ray = camera->generateRay(uv.u(), uv.v());
+          fb.setPixelColor(y, x, shadeDebugView(ray, material_ids, discovered_lights));
+          continue;
+        }
 
         // per sample
         for (int k = 0; k < fb.getSampleCount(); k++)

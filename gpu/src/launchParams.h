@@ -48,6 +48,7 @@ struct LaunchParams {
   int                  accumID;       // frames accumulated so far
   int                  samplesPerPixel;
   int                  maxBounces;
+  int                  debugView;
 
   OptixTraversableHandle world;
 
