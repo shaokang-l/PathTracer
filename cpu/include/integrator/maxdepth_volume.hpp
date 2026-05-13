@@ -134,6 +134,7 @@ getRayColor(Ray &ray, const ObjectList &prims, gl::vec3 bg_color,
                         r_l *= T_maj * sigma_maj / pdf;
                         return r_u.length() > epsilon;
                     }
+                    return false;
                 });
 
             if (terminated || throughput.length() < epsilon || r_u.length() < epsilon)
@@ -177,7 +178,6 @@ getRayColor(Ray &ray, const ObjectList &prims, gl::vec3 bg_color,
         auto mat = hit_record.material;
         if (mat && mat->is_emitter())
         {
-            accum_L += throughput * mat->emit(ray, hit_record);
             if (bounce == 0 || specular_bounce)
             {
                 accum_L += throughput * mat->emit(ray, hit_record) / r_u.average();

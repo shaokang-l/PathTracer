@@ -33,11 +33,14 @@ namespace mypt {
          | (0xffu        << 24);
   }
 
-  // Reinhard x/(1+x) tone-map + gamma 2.2, matches the prior raygen tail.
+  // Optional Reinhard x/(1+x), then gamma. `useReinhard=false` matches CPU
+  // framebuffer output more closely: clamp + gamma.
   __global__ void tonemapKernel(const float4 *hdrIn,
                                 uint32_t      *fbOut,
                                 int            width,
-                                int            height)
+                                int            height,
+                                float          gamma,
+                                bool           useReinhard)
   {
     const int x = blockIdx.x * blockDim.x + threadIdx.x;
     const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -46,12 +49,13 @@ namespace mypt {
     const int idx = x + y * width;
     const float4 c = hdrIn[idx];
 
-    float r = c.x / (1.f + c.x);
-    float g = c.y / (1.f + c.y);
-    float b = c.z / (1.f + c.z);
-    r = powf(fmaxf(0.f, r), 1.f / 2.2f);
-    g = powf(fmaxf(0.f, g), 1.f / 2.2f);
-    b = powf(fmaxf(0.f, b), 1.f / 2.2f);
+    float r = useReinhard ? c.x / (1.f + c.x) : c.x;
+    float g = useReinhard ? c.y / (1.f + c.y) : c.y;
+    float b = useReinhard ? c.z / (1.f + c.z) : c.z;
+    const float invGamma = gamma > 0.f ? 1.f / gamma : 1.f;
+    r = powf(fmaxf(0.f, r), invGamma);
+    g = powf(fmaxf(0.f, g), invGamma);
+    b = powf(fmaxf(0.f, b), invGamma);
 
     fbOut[idx] = pack_rgba8(r, g, b);
   }
@@ -60,13 +64,16 @@ namespace mypt {
                      uint32_t     *fbOut,
                      int           width,
                      int           height,
+                     float         gamma,
+                     bool          useReinhard,
                      cudaStream_t  stream)
   {
     if (width <= 0 || height <= 0) return;
     const dim3 block(16, 16);
     const dim3 grid((width  + block.x - 1) / block.x,
                     (height + block.y - 1) / block.y);
-    tonemapKernel<<<grid, block, 0, stream>>>(hdrIn, fbOut, width, height);
+    tonemapKernel<<<grid, block, 0, stream>>>(
+      hdrIn, fbOut, width, height, gamma, useReinhard);
   }
 
 } // namespace mypt

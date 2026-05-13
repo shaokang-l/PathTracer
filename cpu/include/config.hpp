@@ -1,17 +1,17 @@
 #pragma once
-#include "header.hpp"
+#include "material/materialFlags.hpp"
 #include "utils/matrix.hpp"
 
 #define LIGHT_SAMPLE_X 1
 #define LIGHT_SAMPLE_Y 1
-#define MAX_RAY_DEPTH 10
-#define SPP_X 4
-#define SPP_Y 4
+#define MAX_RAY_DEPTH 20
+#define SPP_X 16
+#define SPP_Y 16
 #define GAMMA 2.2
 #define WIDTH 500
 #define HEIGHT 500
 #define BG_COLOR gl::vec3(0.0f, 0.0f, 0.0f)
-#define useBVH true
+#define useBVH false
 // NOT IMPLEMENTED YET: // #define USE_MAXDEPTH_MIS
 #define USE_MAXDEPTH_NEE
 // #define USE_MAXDEPTH_NAIVE

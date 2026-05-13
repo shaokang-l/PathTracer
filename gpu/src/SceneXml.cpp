@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -149,7 +150,9 @@ namespace {
   static owl::vec3f parseRgbValue(const std::string &value, const owl::vec3f &fallback)
   {
     if (value.empty()) return fallback;
-    std::istringstream in(value);
+    std::string normalized = value;
+    std::replace(normalized.begin(), normalized.end(), ',', ' ');
+    std::istringstream in(normalized);
     float x = fallback.x;
     float y = fallback.y;
     float z = fallback.z;
@@ -157,6 +160,13 @@ namespace {
     if (!(in >> y)) y = x;
     if (!(in >> z)) z = y;
     return owl::vec3f(x, y, z);
+  }
+
+  static owl::vec3f vec3Attr(const XmlElement &e,
+                             const std::string &name,
+                             const owl::vec3f &fallback)
+  {
+    return parseRgbValue(attr(e, name), fallback);
   }
 
   static owl::vec3f rgbProp(const std::string &body,
@@ -261,6 +271,96 @@ namespace {
     }
   }
 
+  static int parseObjVertexIndex(const std::string &token)
+  {
+    const size_t slash = token.find('/');
+    const std::string indexText =
+      slash == std::string::npos ? token : token.substr(0, slash);
+    return std::stoi(indexText) - 1;
+  }
+
+  static TriangleMesh loadObjMeshXml(const std::filesystem::path &path, int materialId)
+  {
+    std::ifstream in(path);
+    if (!in) {
+      throw std::runtime_error("Failed to open OBJ: " + path.string());
+    }
+
+    TriangleMesh mesh;
+    mesh.materialId = materialId;
+
+    std::string line;
+    while (std::getline(in, line)) {
+      std::istringstream ls(line);
+      std::string tag;
+      ls >> tag;
+      if (tag == "v") {
+        float x = 0.f;
+        float y = 0.f;
+        float z = 0.f;
+        ls >> x >> y >> z;
+        mesh.vertices.push_back(owl::vec3f(x, y, z));
+      } else if (tag == "f") {
+        std::vector<int> face;
+        std::string token;
+        while (ls >> token) {
+          face.push_back(parseObjVertexIndex(token));
+        }
+        if (face.size() < 3) continue;
+        for (size_t i = 1; i + 1 < face.size(); ++i) {
+          mesh.indices.push_back(owl::vec3i(face[0], face[i], face[i + 1]));
+        }
+      }
+    }
+
+    return mesh;
+  }
+
+  static void applyTransform(TriangleMesh &mesh, const SimpleTransform &transform)
+  {
+    for (owl::vec3f &p : mesh.vertices) {
+      p = owl::vec3f(p.x * transform.scale.x,
+                     p.y * transform.scale.y,
+                     p.z * transform.scale.z) + transform.translate;
+    }
+  }
+
+  static void addQuadLightFromMeshBounds(Scene &scene,
+                                         const TriangleMesh &mesh,
+                                         const owl::vec3f &emission)
+  {
+    if (mesh.vertices.empty()) return;
+
+    owl::box3f bounds;
+    for (const owl::vec3f &p : mesh.vertices) bounds.extend(p);
+    const owl::vec3f lo = bounds.lower;
+    const owl::vec3f hi = bounds.upper;
+    const owl::vec3f size = bounds.size();
+
+    LightGPU light = {};
+    light.kind = LIGHT_QUAD;
+    light.emission = emission;
+
+    if (size.x <= size.y && size.x <= size.z) {
+      light.v0 = owl::vec3f(lo.x, lo.y, lo.z);
+      light.edgeU = owl::vec3f(0.f, size.y, 0.f);
+      light.edgeV = owl::vec3f(0.f, 0.f, size.z);
+      light.normal = owl::vec3f(size.x >= 0.f ? -1.f : 1.f, 0.f, 0.f);
+    } else if (size.y <= size.x && size.y <= size.z) {
+      light.v0 = owl::vec3f(lo.x, lo.y, lo.z);
+      light.edgeU = owl::vec3f(size.x, 0.f, 0.f);
+      light.edgeV = owl::vec3f(0.f, 0.f, size.z);
+      light.normal = owl::vec3f(0.f, -1.f, 0.f);
+    } else {
+      light.v0 = owl::vec3f(lo.x, lo.y, lo.z);
+      light.edgeU = owl::vec3f(size.x, 0.f, 0.f);
+      light.edgeV = owl::vec3f(0.f, size.y, 0.f);
+      light.normal = owl::vec3f(0.f, 0.f, -1.f);
+    }
+    light.area = owl::length(owl::cross(light.edgeU, light.edgeV));
+    if (light.area > 0.f) scene.lights.push_back(light);
+  }
+
   static SimpleTransform parseTransform(const std::string &shapeBody)
   {
     SimpleTransform result;
@@ -345,11 +445,31 @@ namespace {
     scene.lights.push_back(light);
   }
 
+  static void parseCameraXml(const std::string &xml, Scene &scene)
+  {
+    const std::vector<XmlElement> sensors = findElements(xml, "sensor");
+    if (sensors.empty()) return;
+
+    const XmlElement &sensor = sensors.front();
+    scene.hasCamera = true;
+    scene.cameraFovy = floatProp(sensor.body, "fov", scene.cameraFovy);
+
+    const std::vector<XmlElement> lookAts = findElements(sensor.body, "lookAt");
+    if (!lookAts.empty()) {
+      scene.cameraFrom = vec3Attr(lookAts.front(), "origin", scene.cameraFrom);
+      scene.cameraAt = vec3Attr(lookAts.front(), "target", scene.cameraAt);
+      scene.cameraUp = vec3Attr(lookAts.front(), "up", scene.cameraUp);
+    }
+  }
+
 } // namespace
 
 Scene Scene::loadMitsubaXml(const std::string &path)
 {
   const std::string xml = readTextFile(path);
+  const std::filesystem::path xmlPath(path);
+  const std::filesystem::path baseDir =
+    xmlPath.has_parent_path() ? xmlPath.parent_path() : std::filesystem::path(".");
 
   Scene scene;
   std::map<std::string, int> materialIds;
@@ -375,13 +495,16 @@ Scene Scene::loadMitsubaXml(const std::string &path)
   }
 
   for (const XmlElement &shape : findElements(xml, "shape")) {
-    if (attr(shape, "type") != "serialized") {
+    const std::string shapeType = attr(shape, "type");
+    if (shapeType != "serialized" && shapeType != "obj") {
       std::cerr << "[mypt] Mitsuba XML: skipping unsupported shape type '"
-                << attr(shape, "type") << "'" << std::endl;
+                << shapeType << "'" << std::endl;
       continue;
     }
 
     int materialId = -1;
+    owl::vec3f areaEmission(0.f);
+    bool hasAreaEmitter = false;
     const std::vector<XmlElement> nestedBsdfs = findElements(shape.body, "bsdf");
     if (!nestedBsdfs.empty()) {
       const std::string type = attr(nestedBsdfs.front(), "type");
@@ -404,14 +527,34 @@ Scene Scene::loadMitsubaXml(const std::string &path)
       }
     }
 
+    for (const XmlElement &emitter : findElements(shape.body, "emitter")) {
+      if (attr(emitter, "type") == "area") {
+        areaEmission = rgbProp(emitter.body, "radiance", owl::vec3f(1.f));
+        materialId = addMaterial(scene, makeEmissiveXml(areaEmission));
+        hasAreaEmitter = true;
+        break;
+      }
+    }
+
     if (materialId < 0) {
       materialId = materialIds["__diffmat"];
     }
 
-    addMatpreviewShape(scene,
-                       intProp(shape.body, "shapeIndex", 0),
-                       materialId,
-                       parseTransform(shape.body));
+    if (shapeType == "obj") {
+      const std::string filename =
+        attr(findNamedChild(shape.body, "string", "filename"), "value");
+      TriangleMesh mesh = loadObjMeshXml(baseDir / filename, materialId);
+      applyTransform(mesh, parseTransform(shape.body));
+      if (hasAreaEmitter) {
+        addQuadLightFromMeshBounds(scene, mesh, areaEmission);
+      }
+      scene.meshes.push_back(std::move(mesh));
+    } else {
+      addMatpreviewShape(scene,
+                         intProp(shape.body, "shapeIndex", 0),
+                         materialId,
+                         parseTransform(shape.body));
+    }
   }
 
   float envScale = 0.f;
@@ -426,6 +569,7 @@ Scene Scene::loadMitsubaXml(const std::string &path)
     addEnvLightApprox(scene, 1.f);
   }
 
+  parseCameraXml(xml, scene);
   scene.computeBounds();
   std::cout << "[mypt] loaded Mitsuba XML subset: " << path
             << " (" << scene.meshes.size() << " meshes, "

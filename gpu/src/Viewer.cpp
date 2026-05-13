@@ -1,13 +1,20 @@
 #include "Viewer.h"
 
+#include "external/stb_image_write.h"
+
+#include <cuda_runtime.h>
 #include <iostream>
+#include <vector>
 
 namespace mypt {
 
-  Viewer::Viewer(Renderer &renderer, const owl::box3f &sceneBounds)
+  Viewer::Viewer(Renderer &renderer,
+                 const owl::box3f &sceneBounds,
+                 const owl::vec2i &initialSize,
+                 bool visible)
     : owl::viewer::OWLViewer("MyPT - OWL Path Tracer Scaffold",
-                             owl::vec2i(1280, 720),
-                             /*visible=*/true,
+                             initialSize,
+                             visible,
                              /*enableVsync=*/true),
       renderer_(renderer)
   {
@@ -23,6 +30,7 @@ namespace mypt {
   void Viewer::resize(const owl::vec2i &newSize)
   {
     OWLViewer::resize(newSize);
+    currentSize_ = newSize;
     renderer_.resize(fbPointer, newSize);
     cameraChanged();
   }
@@ -55,6 +63,33 @@ namespace mypt {
     default:
       OWLViewer::key(k, where);
     }
+  }
+
+  bool Viewer::saveFrameBuffer(const std::string &path) const
+  {
+    if (!fbPointer || currentSize_.x <= 0 || currentSize_.y <= 0) {
+      std::cerr << "[mypt] cannot save framebuffer before resize/render" << std::endl;
+      return false;
+    }
+
+    std::vector<uint32_t> pixels(size_t(currentSize_.x) * size_t(currentSize_.y));
+    const size_t bytes = pixels.size() * sizeof(uint32_t);
+    cudaError_t err = cudaMemcpy(pixels.data(), fbPointer, bytes, cudaMemcpyDeviceToHost);
+    if (err != cudaSuccess) {
+      std::cerr << "[mypt] failed to copy framebuffer: "
+                << cudaGetErrorString(err) << std::endl;
+      return false;
+    }
+
+    stbi_flip_vertically_on_write(1);
+    const int ok = stbi_write_png(path.c_str(),
+                                  currentSize_.x,
+                                  currentSize_.y,
+                                  4,
+                                  pixels.data(),
+                                  currentSize_.x * 4);
+    std::cout << "[mypt] wrote framebuffer: " << path << std::endl;
+    return ok != 0;
   }
 
 } // namespace mypt

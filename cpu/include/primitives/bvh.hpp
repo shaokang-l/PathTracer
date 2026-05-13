@@ -159,4 +159,4 @@ inline void printBT(const std::string &prefix, std::shared_ptr<Hittable> node,
   }
 }
 
-void printBT(std::shared_ptr<Hittable> node) { printBT("", node, false); }
+inline void printBT(std::shared_ptr<Hittable> node) { printBT("", node, false); }

@@ -55,6 +55,12 @@ namespace mypt {
         starting with the next launch. Does not reset accumulation. */
     void setSamplesPerPixel(int spp) { samplesPerPixel_ = spp; }
     void setMaxBounces(int b)        { maxBounces_      = b;   }
+    void setMissColor(const owl::vec3f &color);
+    void setOutputTransform(float gamma, bool useReinhard)
+    {
+      gamma_ = gamma;
+      useReinhardTonemap_ = useReinhard;
+    }
 
     int  accumID() const { return accumID_; }
 
@@ -110,6 +116,9 @@ namespace mypt {
     int              accumID_       = 0;
     int              samplesPerPixel_ = 1;
     int              maxBounces_      = 8;
+    owl::vec3f       missColor_       = owl::vec3f(0.f);
+    float            gamma_           = 2.2f;
+    bool             useReinhardTonemap_ = true;
 
     struct CamFrame {
       owl::vec3f pos;

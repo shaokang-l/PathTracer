@@ -45,8 +45,10 @@ struct SceneInfo
   uint _height = 800;
   uint spp_x = 2;
   uint spp_y = 2;
+  uint max_depth = MAX_RAY_DEPTH;
   float _gamma = 1.0f;
   std::shared_ptr<Medium> global_medium = nullptr;
+  bool use_config_defaults = true;
 
   SceneInfo() = default;
   void render(const std::string &out_path = "./output.png",
@@ -68,15 +70,19 @@ struct SceneInfo
       return;
     }
 
+    if (use_config_defaults)
+    {
 #ifdef OVERRIDE_LOCAL_RENDER_VAL
-    _width = WIDTH;
-    _height = HEIGHT;
-    spp_x = SPP_X;
-    spp_y = SPP_Y;
-    _gamma = GAMMA;
-    bg_color = BG_COLOR;
-    use_bvh = useBVH;
+      _width = WIDTH;
+      _height = HEIGHT;
+      spp_x = SPP_X;
+      spp_y = SPP_Y;
+      max_depth = MAX_RAY_DEPTH;
+      _gamma = GAMMA;
+      bg_color = BG_COLOR;
+      use_bvh = useBVH;
 #endif
+    }
 
     if (use_bvh)
       bvh = make_shared<BVHNode>(objects);
@@ -138,21 +144,21 @@ struct SceneInfo
             color += getRayColor(ray, objects, bg_color, discovered_lights, bvh);
 #elif defined USE_MAXDEPTH_NEE
             color +=
-                getRayColor(ray, objects, bg_color, discovered_lights, MAX_RAY_DEPTH, bvh);
+                getRayColor(ray, objects, bg_color, discovered_lights, max_depth, bvh);
 #elif defined USE_ROULETTE_NAIVE
             color += getRayColor(ray, objects, light_objects, bg_color,
-                                 MAX_RAY_DEPTH, bvh);
+                                 max_depth, bvh);
 #elif defined USE_MAXDEPTH_RESERVOIR
             color +=
-                getRayColor(ray, objects, bg_color, discovered_lights, MAX_RAY_DEPTH, bvh);
+                getRayColor(ray, objects, bg_color, discovered_lights, max_depth, bvh);
 #elif defined USE_MAXDEPTH_NAIVE
             color += getRayColor(ray, objects, light_objects, bg_color,
-                                 MAX_RAY_DEPTH, bvh);
+                                 max_depth, bvh);
 #elif defined USE_MAXDEPTH_MIS
             color +=
-                getRayColor(ray, objects, bg_color, discovered_lights, MAX_RAY_DEPTH, bvh);
+                getRayColor(ray, objects, bg_color, discovered_lights, max_depth, bvh);
 #elif defined USE_MAXDEPTH_VOLUME
-            color += getRayColor(ray, objects, bg_color, discovered_lights, MAX_RAY_DEPTH, bvh, global_medium);
+            color += getRayColor(ray, objects, bg_color, discovered_lights, max_depth, bvh, global_medium);
 #else
             std::cout << "No method selected!" << std::endl;
             std::runtime_error(
@@ -170,7 +176,7 @@ struct SceneInfo
       counter.fetch_add(1, std::memory_order_relaxed);
     }
 
-    fb.writeToFile(out_path, GAMMA);
+    fb.writeToFile(out_path, _gamma);
   };
 
   void renderWithInfo(const std::string &out_path = "./output.png",

@@ -12,7 +12,7 @@
 
 namespace mypt {
 
-  /*! Reinhard tone-map + gamma 2.2 + RGBA8 pack. Reads `width*height`
+  /*! Tone-map + gamma + RGBA8 pack. Reads `width*height`
       HDR float4 pixels from `hdrIn` and writes packed RGBA8 to `fbOut`.
       Async on `stream`; caller is responsible for stream ordering /
       synchronization. */
@@ -20,6 +20,8 @@ namespace mypt {
                      uint32_t     *fbOut,
                      int           width,
                      int           height,
+                     float         gamma,
+                     bool          useReinhard,
                      cudaStream_t  stream);
 
 } // namespace mypt

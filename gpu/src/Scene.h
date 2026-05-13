@@ -40,6 +40,12 @@ namespace mypt {
     // Optional: world-space bounds, used to set a sensible camera speed.
     owl::box3f bounds;
 
+    bool hasCamera = false;
+    owl::vec3f cameraFrom = owl::vec3f(0.f, 5.f, 18.f);
+    owl::vec3f cameraAt = owl::vec3f(0.f);
+    owl::vec3f cameraUp = owl::vec3f(0.f, 1.f, 0.f);
+    float cameraFovy = 45.f;
+
     void computeBounds();
 
     // Convenience: load a built-in test scene (Cornell-box-ish).

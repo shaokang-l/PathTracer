@@ -4,6 +4,7 @@ set(SRC_CPP
     mesh_io/meshLoader.cpp
     primitives/triangleMesh.cpp
     primitives/meshBVH.cpp
+    scenes/scene_xml.cpp
     sampler/sampler.cpp
     external/scene_io.cpp
     material/hairMarsch.cpp

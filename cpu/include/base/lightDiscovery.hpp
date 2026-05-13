@@ -2,7 +2,7 @@
 #pragma once
 #include "objectList.hpp"
 
-LightList discover_emissive_objects_as_lights(const ObjectList &all_scene_objects)
+inline LightList discover_emissive_objects_as_lights(const ObjectList &all_scene_objects)
 {
     LightList discovered_lights;
 

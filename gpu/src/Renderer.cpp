@@ -69,8 +69,10 @@ namespace mypt {
     owlMissProgSet(ctx_, RayType::RADIANCE_RAY_TYPE, missProg_);
     owlMissProgSet(ctx_, RayType::SHADOW_RAY_TYPE, shadowMissProg_);
 
-    owlMissProgSet3f(missProg_, "skyColorTop",    owl3f{ 0.55f, 0.75f, 1.0f });
-    owlMissProgSet3f(missProg_, "skyColorBottom", owl3f{ 1.00f, 1.00f, 1.0f });
+    owlMissProgSet3f(missProg_, "skyColorTop",
+                     owl3f{ missColor_.x, missColor_.y, missColor_.z });
+    owlMissProgSet3f(missProg_, "skyColorBottom",
+                     owl3f{ missColor_.x, missColor_.y, missColor_.z });
 
     OWLVarDecl rgVars[] = { {} };
     rayGen_ = owlRayGenCreate(ctx_, module_, "rayGen",
@@ -187,6 +189,18 @@ namespace mypt {
     resetAccum();
   }
 
+  void Renderer::setMissColor(const vec3f &color)
+  {
+    missColor_ = color;
+    if (missProg_) {
+      owlMissProgSet3f(missProg_, "skyColorTop",
+                       owl3f{ color.x, color.y, color.z });
+      owlMissProgSet3f(missProg_, "skyColorBottom",
+                       owl3f{ color.x, color.y, color.z });
+    }
+    resetAccum();
+  }
+
   void Renderer::setCamera(const vec3f &from, const vec3f &at,
                            const vec3f &up,   float fovyDeg)
   {
@@ -266,7 +280,13 @@ namespace mypt {
           : denoiser_.output();
       }
 
-      launchTonemap(displayHdr, fbPtr_, fbSize_.x, fbSize_.y, stream);
+      launchTonemap(displayHdr,
+                    fbPtr_,
+                    fbSize_.x,
+                    fbSize_.y,
+                    gamma_,
+                    useReinhardTonemap_,
+                    stream);
     }
 
     cudaEventRecord(eventEnd_,   /*stream=*/0);
