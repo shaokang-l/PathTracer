@@ -39,6 +39,7 @@ set(PATHTRACER_TESTS
     test_common_material
     test_restir_reservoir
     test_restir_target
+    test_restir_ris_estimator
 )
 
 foreach(test_name IN LISTS PATHTRACER_TESTS)
