@@ -48,8 +48,8 @@ struct LaunchParams {
   int                  accumID;       // frames accumulated so far
   int                  samplesPerPixel;
   int                  maxBounces;
-  int                  debugView;
-  int                  directLightMode;
+  int                  debugView; // pt::DebugViewKind as int
+  int                  directLightMode; // pt::DirectLightMode as int
   int                  restirInitialCandidates;
 
   OptixTraversableHandle world;

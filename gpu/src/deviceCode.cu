@@ -14,6 +14,8 @@
 #include "launchParams.h"
 #include "ptInterop.h"
 #include "rayTypes.h"
+#include "pt/render/debug_view_kind.h"
+#include "pt/render/direct_light_mode.h"
 #include "pt/restir/reservoir.h"
 #include "pt/restir/target.h"
 
@@ -50,15 +52,6 @@ struct PRD {
 // ------------------------------------------------------------------
 struct ShadowPRD {
   vec3f transmittance;
-};
-
-enum DebugView : int {
-  DEBUG_VIEW_BEAUTY = 0,
-  DEBUG_VIEW_NORMAL = 1,
-  DEBUG_VIEW_ALBEDO = 2,
-  DEBUG_VIEW_VISIBILITY = 3,
-  DEBUG_VIEW_MATERIAL_ID = 4,
-  DEBUG_VIEW_LIGHT_ID = 5,
 };
 
 // ---------------
@@ -122,6 +115,54 @@ OPTIX_MISS_PROGRAM(missShadow)()
   prd.transmittance = vec3f(1.f);
 }
 
+
+
+__device__ inline bool generateDirectLightCandidate(const LaunchParams &params,
+                                                    const PRD &prd,
+                                                    const BSDF &bsdf,
+                                                    const vec3f &wo,
+                                                    float uLight,
+                                                    vec2f uSurface,
+                                                    pt::RestirDirectLightCandidate &out)
+{
+  out = pt::RestirDirectLightCandidate();
+
+  LightSample lightSample;
+  if (!sampleLight(params.lights, params.lightCount, uLight, uSurface, lightSample))
+    return false;
+
+  const vec3f toLight = lightSample.p - prd.hitP;
+  const float dist2 = dot(toLight, toLight);
+  if (dist2 <= 1e-7f || lightSample.pdfA <= 0.f)
+    return false;
+
+  const float dist = sqrtf(dist2);
+  const vec3f wi = toLight * (1.f / dist);
+
+  const float NoI = fmaxf(dot(prd.N, wi), 0.f);
+  const float NoL = fmaxf(dot(lightSample.n, -wi), 0.f);
+  if (NoI <= 0.f || NoL <= 0.f)
+    return false;
+
+  const vec3f f = bsdf.f(wo, wi);
+  const float G = NoI * NoL / dist2;
+  const vec3f unshadowedContribution = lightSample.Le * f * G;
+  const float target = pt::restirTargetFromRgb(toPtVec(unshadowedContribution));
+  if (target <= 0.f)
+    return false;
+
+  out.sample.lightId = lightSample.lightId;
+  out.sample.uv = toPtVec(uSurface);
+  out.sample.sourcePdf = lightSample.pdfA;
+  out.sample.target = target;
+  out.sample.position = toPtVec(lightSample.p);
+  out.sample.normal = toPtVec(lightSample.n);
+  out.sample.emission = toPtVec(lightSample.Le);
+  out.wi = toPtVec(wi);
+  out.unshadowedContribution = toPtVec(unshadowedContribution);
+  return true;
+}
+
 // ------------------------------------------------------------------
 // traceVisibility: shoot a ShadowRay from `p` toward `target` and
 // return the accumulated transmittance written by the shadow CH/miss
@@ -175,21 +216,23 @@ __device__ inline vec3f shadeDebugView(const LaunchParams &params,
 {
   if (!prd.didHit) return prd.emission;
 
-  if (params.debugView == DEBUG_VIEW_NORMAL) {
+  const pt::DebugViewKind debugView = toDebugViewKind(params.debugView);
+
+  if (debugView == pt::DebugViewKind::Normal) {
     return 0.5f * (prd.N + vec3f(1.f));
   }
 
   const MaterialGPU &material = params.materials[prd.materialId];
-  if (params.debugView == DEBUG_VIEW_ALBEDO) {
+  if (debugView == pt::DebugViewKind::Albedo) {
     return materialDebugAlbedo(material);
   }
 
-  if (params.debugView == DEBUG_VIEW_MATERIAL_ID) {
+  if (debugView == pt::DebugViewKind::MaterialId) {
     return hashColor(prd.materialId);
   }
 
-  if (params.debugView == DEBUG_VIEW_VISIBILITY ||
-      params.debugView == DEBUG_VIEW_LIGHT_ID) {
+  if (debugView == pt::DebugViewKind::Visibility ||
+      debugView == pt::DebugViewKind::LightId) {
     LightSample lightSample;
     const int lightID = params.lightCount > 0 ? 0 : -1;
     if (sampleLight(params.lights,
@@ -199,7 +242,7 @@ __device__ inline vec3f shadeDebugView(const LaunchParams &params,
                     lightSample)) {
       const vec3f V = traceVisibility(params.world, prd.hitP, lightSample.p);
       const float visible = fmaxf(V.x, fmaxf(V.y, V.z));
-      if (params.debugView == DEBUG_VIEW_LIGHT_ID) {
+      if (debugView == pt::DebugViewKind::LightId) {
         return visible > 0.f ? hashColor(lightID) : vec3f(0.f);
       }
       return vec3f(visible);
@@ -222,7 +265,8 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
   RNG rng(pxIdx, params.accumID + 1);
 
   vec3f L = vec3f(0.f);
-  const bool debugMode = params.debugView != DEBUG_VIEW_BEAUTY;
+  const pt::DebugViewKind debugView = toDebugViewKind(params.debugView);
+  const bool debugMode = debugView != pt::DebugViewKind::Beauty;
   const int spp = debugMode ? 1 : params.samplesPerPixel;
 
   for (int s = 0; s < spp; ++s) {

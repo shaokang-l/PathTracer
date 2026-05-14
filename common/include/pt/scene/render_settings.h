@@ -1,6 +1,8 @@
 #pragma once
 
 #include "../math/vec.h"
+#include "../render/debug_view_kind.h"
+#include "../render/direct_light_mode.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -13,20 +15,6 @@ namespace pt {
 enum class ToneMapKind {
   Clamp,
   Reinhard,
-};
-
-enum class DebugViewKind {
-  Beauty = 0,
-  Normal,
-  Albedo,
-  Visibility,
-  MaterialId,
-  LightId,
-};
-
-enum class DirectLightMode {
-  Nee = 0,
-  Restir,
 };
 
 struct RenderSettings {

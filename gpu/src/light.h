@@ -33,9 +33,10 @@ struct LightSample {
   vec3f n;
   vec3f Le;
   float pdfA;       // area-measure pdf, including light selection if used
+  int lightId;
 };
 
-// currently a uniformly choose a light from the light list.
+// Uniformly choose one light from the light list.
 __both__ inline bool sampleLight(const LightGPU* lights,
                                     int lightCount,
                                     float uLight,
@@ -53,6 +54,7 @@ __both__ inline bool sampleLight(const LightGPU* lights,
       out.Le = light.emission;
       if (light.area <= 0.f) return false;
       out.pdfA = (1.f / float(lightCount)) * (1.f / light.area);
+      out.lightId = lightID;
       return true;
     default:
       return false;
