@@ -56,11 +56,11 @@
 
 ## RESTIR DI
 * ✅ Add ReSTIR DI implementation roadmap in `docs/restir_di_roadmap.md`
-* Add GPU reservoir/sample POD structs and per-pixel reservoir buffers
-* Add `--direct-light nee|restir` backend selection
-* Implement per-pixel RIS without temporal or spatial reuse
+* ✅ Add GPU reservoir/sample POD structs and per-pixel reservoir buffers
+* ✅ Add `--direct-light nee|restir` backend selection
+* ✅ Implement per-pixel RIS without temporal or spatial reuse
+* ✅ Validate no-reuse ReSTIR against current NEE on Cornell box XML
 * Add ReSTIR debug views (`reservoir-weight`, `reservoir-m`, `reservoir-target`, `restir-light-id`)
-* Validate no-reuse ReSTIR against current NEE on Cornell box XML
 * Add temporal reuse after no-reuse RIS is stable
 * Add spatial reuse after temporal rejection/debugging is stable
 
