@@ -24,6 +24,13 @@ namespace pt {
     uint32_t M = 0;      // number of candidates represented by the reservoir
   };
 
+  struct RestirDirectLightCandidate {
+    RestirLightSample sample;
+    Vec3f wi = Vec3f(0.f); // direction from shading point to sampled light point
+    Vec3f unshadowedContribution = Vec3f(0.f); // Le * f(wo, wi) * G
+    bool valid = false;
+  };
+
   __both__ inline void clearReservoir(RestirReservoir &reservoir)
   {
     reservoir.y = RestirLightSample();

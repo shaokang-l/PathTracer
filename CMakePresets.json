@@ -7,8 +7,8 @@
   },
   "configurePresets": [
     {
-      "name": "cpu-debug",
-      "displayName": "CPU Debug",
+      "name": "cpu-relwithdebinfo",
+      "displayName": "CPU RelWithDebInfo",
       "description": "Build only the CPU path tracer into build-cpu.",
       "generator": "Visual Studio 17 2022",
       "binaryDir": "${sourceDir}/build-cpu",
@@ -18,12 +18,25 @@
       }
     },
     {
-      "name": "gpu-debug",
-      "displayName": "GPU Debug",
+      "name": "gpu-relwithdebinfo",
+      "displayName": "GPU RelWithDebInfo",
       "description": "Build only the OWL/OptiX GPU renderer into build-gpu.",
       "generator": "Visual Studio 17 2022",
       "binaryDir": "${sourceDir}/build-gpu",
       "cacheVariables": {
+        "PATHTRACER_BUILD_CPU": "OFF",
+        "PATHTRACER_BUILD_GPU": "ON"
+      }
+    },
+    {
+      "name": "gpu-ninja-relwithdebinfo",
+      "displayName": "GPU Ninja RelWithDebInfo",
+      "description": "Build the OWL/OptiX GPU renderer with Ninja. This is the default for CMake Tools because Ninja supports the lowercase all target.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build-gpu-ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "PATHTRACER_BUILD_CPU": "OFF",
         "PATHTRACER_BUILD_GPU": "ON"
       }
@@ -35,7 +48,7 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build-clangd",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "PATHTRACER_BUILD_CPU": "OFF",
         "PATHTRACER_BUILD_GPU": "ON"
@@ -44,19 +57,27 @@
   ],
   "buildPresets": [
     {
-      "name": "cpu-debug",
-      "displayName": "CPU Debug",
-      "configurePreset": "cpu-debug",
-      "configuration": "Debug",
+      "name": "cpu-relwithdebinfo",
+      "displayName": "CPU RelWithDebInfo",
+      "configurePreset": "cpu-relwithdebinfo",
+      "configuration": "RelWithDebInfo",
       "targets": [
         "pathtracer_app"
       ]
     },
     {
-      "name": "gpu-debug",
-      "displayName": "GPU Debug",
-      "configurePreset": "gpu-debug",
-      "configuration": "Debug",
+      "name": "gpu-relwithdebinfo",
+      "displayName": "GPU RelWithDebInfo",
+      "configurePreset": "gpu-relwithdebinfo",
+      "configuration": "RelWithDebInfo",
+      "targets": [
+        "mypt"
+      ]
+    },
+    {
+      "name": "gpu-ninja-relwithdebinfo",
+      "displayName": "GPU Ninja RelWithDebInfo",
+      "configurePreset": "gpu-ninja-relwithdebinfo",
       "targets": [
         "mypt"
       ]

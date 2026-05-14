@@ -35,6 +35,7 @@ struct LightSample {
   float pdfA;       // area-measure pdf, including light selection if used
 };
 
+// currently a uniformly choose a light from the light list.
 __both__ inline bool sampleLight(const LightGPU* lights,
                                     int lightCount,
                                     float uLight,

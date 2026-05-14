@@ -57,6 +57,13 @@ target_include_directories(mypt-ptx
     ${CMAKE_SOURCE_DIR}/common/include
 )
 
+if(TARGET mypt-ptx_ptx)
+  target_include_directories(mypt-ptx_ptx
+    PRIVATE
+      ${CMAKE_SOURCE_DIR}/common/include
+  )
+endif()
+
 add_executable(mypt
   src/main.cpp
   src/Denoiser.cpp

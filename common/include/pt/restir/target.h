@@ -13,14 +13,14 @@ namespace pt {
     float G = 0.f;   // area-measure geometry term: NoI * NoL / distance^2
   };
 
-  __both__ inline float luminance(Vec3f c)
+  __both__ inline float restirLuminance(Vec3f c)
   {
     return 0.2126f * c.x + 0.7152f * c.y + 0.0722f * c.z;
   }
 
   __both__ inline float restirTargetFromRgb(Vec3f value)
   {
-    return fmaxf(0.f, luminance(value));
+    return fmaxf(0.f, restirLuminance(value));
   }
 
   __both__ inline DirectLightGeometry directLightGeometry(Vec3f shadingP,

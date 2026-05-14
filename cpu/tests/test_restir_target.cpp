@@ -4,10 +4,10 @@
 
 TEST(RestirTarget, LuminanceUsesRec709Weights)
 {
-  EXPECT_NEAR(pt::luminance(pt::Vec3f(1.f, 0.f, 0.f)), 0.2126f, 1e-6f);
-  EXPECT_NEAR(pt::luminance(pt::Vec3f(0.f, 1.f, 0.f)), 0.7152f, 1e-6f);
-  EXPECT_NEAR(pt::luminance(pt::Vec3f(0.f, 0.f, 1.f)), 0.0722f, 1e-6f);
-  EXPECT_NEAR(pt::luminance(pt::Vec3f(1.f)), 1.f, 1e-6f);
+  EXPECT_NEAR(pt::restirLuminance(pt::Vec3f(1.f, 0.f, 0.f)), 0.2126f, 1e-6f);
+  EXPECT_NEAR(pt::restirLuminance(pt::Vec3f(0.f, 1.f, 0.f)), 0.7152f, 1e-6f);
+  EXPECT_NEAR(pt::restirLuminance(pt::Vec3f(0.f, 0.f, 1.f)), 0.0722f, 1e-6f);
+  EXPECT_NEAR(pt::restirLuminance(pt::Vec3f(1.f)), 1.f, 1e-6f);
 }
 
 TEST(RestirTarget, TargetFromRgbClampsNegativeLuminance)

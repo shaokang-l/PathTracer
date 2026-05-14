@@ -14,3 +14,5 @@
 #include "launchParams.h"
 #include "material.h"
 #include "rayTypes.h"
+#include "pt/restir/reservoir.h"
+#include "pt/restir/target.h"

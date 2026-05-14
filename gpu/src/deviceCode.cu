@@ -12,7 +12,10 @@
 #include "bxdfFlags.h"
 #include "geometryData.h"
 #include "launchParams.h"
+#include "ptInterop.h"
 #include "rayTypes.h"
+#include "pt/restir/reservoir.h"
+#include "pt/restir/target.h"
 
 using namespace owl;
 using namespace mypt;
@@ -57,6 +60,7 @@ enum DebugView : int {
   DEBUG_VIEW_MATERIAL_ID = 4,
   DEBUG_VIEW_LIGHT_ID = 5,
 };
+
 // ---------------
 // ---------------------------------------------------
 // Closest-hit: fill the PRD. All shading / next-event logic lives in
