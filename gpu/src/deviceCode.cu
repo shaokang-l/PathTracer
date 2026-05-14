@@ -115,6 +115,109 @@ OPTIX_MISS_PROGRAM(missShadow)()
   prd.transmittance = vec3f(1.f);
 }
 
+__device__ inline vec3f traceVisibility(OptixTraversableHandle world,
+                                        const vec3f &p,
+                                        const vec3f &target);
+
+__device__ inline bool generateDirectLightCandidate(
+  const LaunchParams &params,
+  const PRD &prd,
+  const BSDF &bsdf,
+  const vec3f &wo,
+  float uLight,
+  vec2f uSurface,
+  pt::RestirDirectLightCandidate &out);
+
+__device__ inline vec3f estimateDirectLightNee(
+  const LaunchParams &params,
+  const PRD &prd,
+  const BSDF &bsdf,
+  const vec3f &wo,
+  float uLight,
+  vec2f uSurface)
+  {
+      LightSample lightSample;
+      if (sampleLight(params.lights, params.lightCount, uLight, uSurface, lightSample))
+      {
+        vec3f toLight = lightSample.p - prd.hitP;
+        float dist2 = dot(toLight, toLight);
+
+        if (dist2 > 1e-7f && lightSample.pdfA > 0.f) {
+          float dist = sqrtf(dist2);
+          vec3f wi = toLight * (1.f / dist);
+
+          float NoI = fmaxf(dot(prd.N, wi), 0.f);
+          float NoL = fmaxf(dot(lightSample.n, -wi), 0.f);
+
+          if (NoI > 0.f && NoL > 0.f) {
+            const vec3f V = traceVisibility(params.world, prd.hitP, lightSample.p);
+            if (V.x > 0.f || V.y > 0.f || V.z > 0.f) {
+              const vec3f f = bsdf.f(wo, wi);
+              const float G = NoI * NoL / dist2;
+              return lightSample.Le * f * V * G / lightSample.pdfA;
+            }
+          }
+        }
+      }
+      return vec3f(0.f);
+    }
+
+  
+
+__device__ inline vec3f estimateDirectLightReservoir(
+  const LaunchParams &params,
+  const PRD &prd,
+  const BSDF &bsdf,
+  const vec3f &wo,
+  RNG &rng)
+{
+  pt::RestirReservoir reservoir;
+  pt::RestirDirectLightCandidate selectedCandidate;
+
+  // No-reuse ReSTIR DI, local reservoir only:
+  // 1. Generate N initial candidates from the current light sampler.
+  // 2. Feed each valid candidate into reservoir update.
+  // 3. Keep a copy of the candidate when updateReservoir() replaces y.
+  //
+  // This is where --restir-initial-candidates is consumed on the device.
+  for (int i = 0; i < params.restirInitialCandidates; ++i) {
+    pt::RestirDirectLightCandidate candidate;
+    const bool validCandidate =
+      generateDirectLightCandidate(params,
+                                   prd,
+                                   bsdf,
+                                   wo,
+                                   rng(),
+                                   vec2f(rng(), rng()),
+                                   candidate);
+    if (!validCandidate)
+      continue;
+
+    // TODO(ReSTIR): update the local reservoir with this candidate.
+    //
+    const bool replaced =
+      pt::updateReservoir(reservoir, candidate.sample, rng());
+    if (replaced) {
+      selectedCandidate = candidate;
+    }
+  }
+
+  // TODO(ReSTIR): finalize the reservoir after all initial candidates.
+  //
+  pt::finalizeReservoir(reservoir);
+
+  // TODO(ReSTIR): trace visibility only for the selected reservoir sample.
+  //
+  if (reservoir.W > 0.f && reservoir.y.target > 0.f) {
+    const vec3f lightP = fromPtVec(selectedCandidate.sample.position);
+    const vec3f V = traceVisibility(params.world, prd.hitP, lightP);
+    if (V.x > 0.f || V.y > 0.f || V.z > 0.f) {
+      return fromPtVec(selectedCandidate.unshadowedContribution) * V * reservoir.W;
+    }
+  }
+
+  return vec3f(0.f);
+}
 
 
 __device__ inline bool generateDirectLightCandidate(const LaunchParams &params,
@@ -311,29 +414,18 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
 
       if (bsdf.hasNonDelta())
       {
-        LightSample lightSample;
-        if (sampleLight(params.lights, params.lightCount, rng(), vec2f(rng(), rng()), lightSample))
-        {
-          vec3f toLight = lightSample.p - prd.hitP;
-          float dist2 = dot(toLight, toLight);
-
-          if (dist2 > 1e-7f && lightSample.pdfA > 0.f) {
-            float dist = sqrtf(dist2);
-            vec3f wi = toLight * (1.f / dist);
-
-            float NoI = fmaxf(dot(prd.N, wi), 0.f);
-            float NoL = fmaxf(dot(lightSample.n, -wi), 0.f);
-
-            if (NoI > 0.f && NoL > 0.f) {
-              const vec3f V = traceVisibility(params.world, prd.hitP, lightSample.p);
-              if (V.x > 0.f || V.y > 0.f || V.z > 0.f) {
-                const vec3f f = bsdf.f(wo, wi);
-                const float G = NoI * NoL / dist2;
-                radiance += throughput * lightSample.Le * f * V * G / lightSample.pdfA;
-              }
-            }
-          }
-        }
+        const pt::DirectLightMode directLightMode =
+          toDirectLightMode(params.directLightMode);
+        const vec3f direct_term =
+          directLightMode == pt::DirectLightMode::Restir
+            ? estimateDirectLightReservoir(params, prd, bsdf, wo, rng)
+            : estimateDirectLightNee(params,
+                                     prd,
+                                     bsdf,
+                                     wo,
+                                     rng(),
+                                     vec2f(rng(), rng()));
+        radiance += throughput * direct_term;
       }
 
       // 02. generate uc and u from RNG

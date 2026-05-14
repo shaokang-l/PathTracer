@@ -84,6 +84,7 @@ namespace pt {
     reservoir.W = reservoir.wSum / (float(reservoir.M) * selectedTarget);
   }
 
+  // probability normalization for the selected candidate
   __both__ inline void finalizeReservoir(RestirReservoir &reservoir)
   {
     finalizeReservoir(reservoir, reservoir.y.target);
