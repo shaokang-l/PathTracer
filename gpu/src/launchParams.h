@@ -49,6 +49,8 @@ struct LaunchParams {
   int                  samplesPerPixel;
   int                  maxBounces;
   int                  debugView;
+  int                  directLightMode;
+  int                  restirInitialCandidates;
 
   OptixTraversableHandle world;
 

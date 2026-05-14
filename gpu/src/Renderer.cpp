@@ -6,6 +6,7 @@
 #include "postprocess.h"
 #include "rayTypes.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -89,6 +90,9 @@ namespace mypt {
       { "samplesPerPixel",OWL_INT,         OWL_OFFSETOF(LaunchParams, samplesPerPixel)},
       { "maxBounces",     OWL_INT,         OWL_OFFSETOF(LaunchParams, maxBounces)     },
       { "debugView",      OWL_INT,         OWL_OFFSETOF(LaunchParams, debugView)      },
+      { "directLightMode", OWL_INT,         OWL_OFFSETOF(LaunchParams, directLightMode)},
+      { "restirInitialCandidates",
+                          OWL_INT,         OWL_OFFSETOF(LaunchParams, restirInitialCandidates)},
       { "world",          OWL_GROUP,       OWL_OFFSETOF(LaunchParams, world)          },
       { "camera.pos",     OWL_FLOAT3,      OWL_OFFSETOF(LaunchParams, camera.pos)     },
       { "camera.dir_00",  OWL_FLOAT3,      OWL_OFFSETOF(LaunchParams, camera.dir_00)  },
@@ -208,6 +212,14 @@ namespace mypt {
     resetAccum();
   }
 
+  void Renderer::setDirectLightMode(pt::DirectLightMode mode,
+                                    int restirInitialCandidates)
+  {
+    directLightMode_ = mode;
+    restirInitialCandidates_ = std::max(1, restirInitialCandidates);
+    resetAccum();
+  }
+
   void Renderer::setCamera(const vec3f &from, const vec3f &at,
                            const vec3f &up,   float fovyDeg)
   {
@@ -251,6 +263,8 @@ namespace mypt {
     owlParamsSet1i (lp_, "samplesPerPixel", samplesPerPixel_);
     owlParamsSet1i (lp_, "maxBounces", maxBounces_);
     owlParamsSet1i (lp_, "debugView", static_cast<int>(debugView_));
+    owlParamsSet1i (lp_, "directLightMode", static_cast<int>(directLightMode_));
+    owlParamsSet1i (lp_, "restirInitialCandidates", restirInitialCandidates_);
     owlParamsSet3f (lp_, "camera.pos",    owl3f{ cam_.pos.x,    cam_.pos.y,    cam_.pos.z    });
     owlParamsSet3f (lp_, "camera.dir_00", owl3f{ cam_.dir_00.x, cam_.dir_00.y, cam_.dir_00.z });
     owlParamsSet3f (lp_, "camera.dir_du", owl3f{ cam_.dir_du.x, cam_.dir_du.y, cam_.dir_du.z });

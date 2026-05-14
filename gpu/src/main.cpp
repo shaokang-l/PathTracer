@@ -217,6 +217,8 @@ int main(int argc, char **argv)
                                    settings.background.y,
                                    settings.background.z));
   renderer.setDebugView(settings.debugView);
+  renderer.setDirectLightMode(settings.directLightMode,
+                              settings.restirInitialCandidates);
   renderer.setOutputTransform(settings.gamma, settings.toneMap == pt::ToneMapKind::Reinhard);
   renderer.setScene(scene);
 

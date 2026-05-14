@@ -24,6 +24,11 @@ enum class DebugViewKind {
   LightId,
 };
 
+enum class DirectLightMode {
+  Nee = 0,
+  Restir,
+};
+
 struct RenderSettings {
   int width = 64;
   int height = 64;
@@ -32,6 +37,8 @@ struct RenderSettings {
   float gamma = 2.2f;
   ToneMapKind toneMap = ToneMapKind::Clamp;
   DebugViewKind debugView = DebugViewKind::Beauty;
+  DirectLightMode directLightMode = DirectLightMode::Nee;
+  int restirInitialCandidates = 1;
   Vec3f background = Vec3f(0.f);
 
   bool hasCameraOverride = false;
@@ -125,6 +132,17 @@ inline RenderSettings parseRenderSettings(int argc, char **argv, const RenderSet
   } else {
     settings.debugView = DebugViewKind::Beauty;
   }
+
+  const std::string_view directLight =
+    parseStringArg(argc, argv, "--direct-light", "nee");
+  settings.directLightMode =
+    directLight == "restir" ? DirectLightMode::Restir : DirectLightMode::Nee;
+  settings.restirInitialCandidates =
+    parseIntArg(argc,
+                argv,
+                "--restir-initial-candidates",
+                settings.restirInitialCandidates);
+  settings.restirInitialCandidates = std::max(1, settings.restirInitialCandidates);
 
   settings.hasCameraOverride =
     hasArg(argc, argv, "--camera-origin") || hasArg(argc, argv, "--camera-target");
