@@ -21,6 +21,7 @@ namespace {
     case pt::DebugViewKind::ReservoirM: return "reservoir-m";
     case pt::DebugViewKind::ReservoirTarget: return "reservoir-target";
     case pt::DebugViewKind::RestirLightId: return "restir-light-id";
+    case pt::DebugViewKind::PrevRestirLightId: return "prev-restir-light-id";
     default: return "unknown";
     }
   }
@@ -38,6 +39,7 @@ namespace {
     case '8': view = pt::DebugViewKind::ReservoirM; return true;
     case '9': view = pt::DebugViewKind::ReservoirTarget; return true;
     case '0': view = pt::DebugViewKind::RestirLightId; return true;
+    case 'p': view = pt::DebugViewKind::PrevRestirLightId; return true;
     default: return false;
     }
   }

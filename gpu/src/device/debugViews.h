@@ -38,7 +38,8 @@ __device__ inline bool isRestirDebugView(pt::DebugViewKind debugView)
   return debugView == pt::DebugViewKind::ReservoirWeight ||
          debugView == pt::DebugViewKind::ReservoirM ||
          debugView == pt::DebugViewKind::ReservoirTarget ||
-         debugView == pt::DebugViewKind::RestirLightId;
+         debugView == pt::DebugViewKind::RestirLightId ||
+         debugView == pt::DebugViewKind::PrevRestirLightId;
 }
 
 __device__ inline float compressDebugScalar(float v)
@@ -51,6 +52,15 @@ __device__ inline vec3f shadeRestirDebugView(const LaunchParams &params,
                                              pt::DebugViewKind debugView)
 {
   if (!params.restirReservoirs) return vec3f(0.f);
+
+  if (debugView == pt::DebugViewKind::PrevRestirLightId) {
+    if (!params.prevRestirReservoirs) return vec3f(0.f);
+    const pt::RestirReservoir prevReservoir = params.prevRestirReservoirs[pxIdx];
+    if (prevReservoir.M == 0 || prevReservoir.W <= 0.f || prevReservoir.y.lightId < 0) {
+      return vec3f(0.f);
+    }
+    return hashColor(prevReservoir.y.lightId);
+  }
 
   const pt::RestirReservoir reservoir = params.restirReservoirs[pxIdx];
   if (reservoir.M == 0 || reservoir.W <= 0.f) return vec3f(0.f);

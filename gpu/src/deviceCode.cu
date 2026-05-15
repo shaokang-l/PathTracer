@@ -225,6 +225,11 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
   // Raygen now writes the linear-HDR accumulator only; tone-mapping and
   // fbPtr packing live in postprocess.cu so a denoiser (or any other
   // post-process) can slot in between accumulate and display.
+  if (debugMode) {
+    params.accumBuffer[pxIdx] = make_float4(L.x, L.y, L.z, 1.f);
+    return;
+  }
+
   float4 prev = (params.accumID > 0)
     ? params.accumBuffer[pxIdx]
     : make_float4(0.f, 0.f, 0.f, 0.f);
