@@ -10,5 +10,5 @@
 /build-gpu-ninja/
 /build-clangd/
 /assets/
-
+/artifacts/
 !/images/*.png
