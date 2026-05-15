@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 
-namespace mypt {
+namespace pt {
 
   struct TriangleMesh {
     std::vector<owl::vec3f> vertices;
@@ -67,4 +67,4 @@ namespace mypt {
     static Scene loadMitsubaXml(const std::string &path);
   };
 
-} // namespace mypt
+} // namespace pt

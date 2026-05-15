@@ -12,7 +12,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace mypt {
+namespace pt {
 namespace {
 
   void checkCuda(cudaError_t result, const char *where)
@@ -191,4 +191,4 @@ namespace {
     return output_;
   }
 
-} // namespace mypt
+} // namespace pt

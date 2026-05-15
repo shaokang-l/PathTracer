@@ -21,7 +21,7 @@
 #include "pt/render/direct_light_mode.h"
 
 using namespace owl;
-using namespace mypt;
+using namespace pt;
 
 // OWL provides a clean way to publish launch-params to the device:
 // declare a __constant__ of your type called 'optixLaunchParams'.
@@ -200,7 +200,7 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
       if (!bsdf.sample_f(wo, uc, u, sample)) break;
       if(sample.pdf <= 0.f) break;
 
-      addEmission = mypt::isSpecular(sample.flag);
+      addEmission = pt::isSpecular(sample.flag);
 
       // 04. update throughput, lo = f*cos*Li/pdf
       const float cosTheta = fabsf(dot(sample.wi, prd.N));

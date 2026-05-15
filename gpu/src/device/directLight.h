@@ -16,7 +16,7 @@
 #include "shading/utils.h"
 
 using namespace owl;
-using namespace mypt;
+using namespace pt;
 
 __device__ inline bool generateDirectLightCandidate(
   const LaunchParams &params,

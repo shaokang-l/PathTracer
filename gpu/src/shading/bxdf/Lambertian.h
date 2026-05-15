@@ -12,7 +12,7 @@
 #include "../orthoBasis.h"
 #include "../utils.h"
 
-namespace mypt {
+namespace pt {
 
   struct LambertianBxDF {
     vec3f albedo;
@@ -42,4 +42,4 @@ namespace mypt {
     }
   };
 
-} // namespace mypt
+} // namespace pt

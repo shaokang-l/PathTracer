@@ -193,7 +193,7 @@ Near-term work should keep the current separation of concerns:
    shading logic across shader entry points. Wavefront scheduling is a larger
    step and should wait until material/light coverage is stable.
 
-## Known limitations of the scaffold (on purpose)
+## Known GPU Limitations
 
 - Single geometry type and one radiance closest-hit program; material dispatch
   is still via `MaterialGPU.kind`.
@@ -203,8 +203,8 @@ Near-term work should keep the current separation of concerns:
 - No motion blur, no instancing (one BLAS containing everything).
 - No volumes or participating media on the GPU.
 - No wavefront scheduler.
-- No ReSTIR DI yet; see `../docs/restir_di_roadmap.md` for the implementation
-  plan.
+- ReSTIR DI currently has a no-reuse baseline and debug plumbing; see
+  `../docs/restir_di_roadmap.md` for the remaining temporal/spatial reuse plan.
 - Denoiser exists as an optional post-process, but it is not a substitute for
   fixing sampling/debug-view correctness.
 

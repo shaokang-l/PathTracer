@@ -3,7 +3,7 @@
 #include <owl/common/math/random.h>
 // This file includes some utility math functions (e.g. sampling, PBR helper math)
 
-namespace mypt {
+namespace pt {
     using owl::vec3f;
     using owl::vec2f;
     using owl::normalize;

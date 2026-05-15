@@ -12,7 +12,7 @@
 
 #include <owl/common/math/vec.h>
 
-namespace mypt {
+namespace pt {
 
   struct RestirSurfaceData {
     owl::vec3f hitP = owl::vec3f(0.f);
@@ -21,4 +21,4 @@ namespace mypt {
     int valid = 0;
   };
 
-} // namespace mypt
+} // namespace pt

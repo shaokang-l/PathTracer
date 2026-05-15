@@ -15,7 +15,7 @@
 
 #include <cuda_runtime.h>
 
-namespace mypt {
+namespace pt {
 
   // ----------------------------------------------------------------------
   // Pack a [0,1] RGB triple into an RGBA8 word laid out the same way
@@ -76,4 +76,4 @@ namespace mypt {
       hdrIn, fbOut, width, height, gamma, useReinhard);
   }
 
-} // namespace mypt
+} // namespace pt

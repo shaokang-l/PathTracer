@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <utility>
 
-namespace mypt {
+namespace pt {
 namespace scene_detail {
 
   void pushBox(TriangleMesh &mesh,
@@ -403,4 +403,4 @@ namespace scene_detail {
   }
 
 } // namespace scene_detail
-} // namespace mypt
+} // namespace pt

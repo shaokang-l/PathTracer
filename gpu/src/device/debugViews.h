@@ -13,7 +13,7 @@
 #include "ptInterop.h"
 
 using namespace owl;
-using namespace mypt;
+using namespace pt;
 
 __device__ inline vec3f hashColor(int id)
 {

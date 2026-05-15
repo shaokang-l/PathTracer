@@ -44,13 +44,13 @@ namespace {
 
 } // namespace
 
-namespace mypt {
+namespace pt {
 
   Viewer::Viewer(Renderer &renderer,
                  const owl::box3f &sceneBounds,
                  const owl::vec2i &initialSize,
                  bool visible)
-    : owl::viewer::OWLViewer("MyPT - OWL Path Tracer Scaffold",
+    : owl::viewer::OWLViewer("PathTracer GPU - OWL/OptiX",
                              initialSize,
                              visible,
                              /*enableVsync=*/true),
@@ -137,4 +137,4 @@ namespace mypt {
     return ok != 0;
   }
 
-} // namespace mypt
+} // namespace pt

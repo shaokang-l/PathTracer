@@ -6,7 +6,7 @@
 #include "pt/material/fresnel.h"
 #include "pt/material/trowbridge_reitz.h"
 
-namespace mypt {
+namespace pt {
 
   __both__ inline pt::Vec2f toPt(const vec2f &v)
   {
@@ -55,5 +55,5 @@ namespace mypt {
     return fmaxf(alphaX, alphaY) < 1e-3f;
   }
 
-} // namespace mypt
+} // namespace pt
 

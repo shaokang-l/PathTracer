@@ -1,37 +1,30 @@
 # ======================================================================== #
-# my-pt - minimal interactive OWL path-tracing scaffold.
+# PathTracer GPU backend - interactive OWL/OptiX renderer.
 #
 # How to use this file:
 #   - It assumes the OWL repo has been added with add_subdirectory(),
 #     so targets   owl::owl   owl_viewer   and the embed_ptx() function
 #     are available.
-#   - Inside the OWL repo (default when this folder lives at
-#     <owl_repo>/my-pt/) you can just do:
-#
-#         add_subdirectory(my-pt)
-#
-#     somewhere in the top-level CMakeLists.txt.
-#
-#   - In your own project (the recommended setup), put OWL as a git
+#   - Put OWL as a git
 #     submodule, then in your project's top-level CMakeLists.txt:
 #
 #         add_subdirectory(third_party/owl EXCLUDE_FROM_ALL)
-#         add_subdirectory(my-pt)
+#         add_subdirectory(gpu)
 #
-#     See my-pt/README.md for full instructions.
+#     See gpu/README.md for full instructions.
 # ======================================================================== #
 
 cmake_minimum_required(VERSION 3.18)
 
 if(NOT TARGET owl::owl)
   message(FATAL_ERROR
-    "my-pt requires the OWL 'owl::owl' target. "
+    "PathTracer GPU backend requires the OWL 'owl::owl' target. "
     "Did you add_subdirectory(<path-to-owl>) before adding this folder?")
 endif()
 
 if(NOT TARGET owl_viewer)
   message(FATAL_ERROR
-    "my-pt requires the 'owl_viewer' target (interactive window). "
+    "PathTracer GPU backend requires the 'owl_viewer' target (interactive window). "
     "Make sure GLFW / OpenGL are available in your OWL build.")
 endif()
 

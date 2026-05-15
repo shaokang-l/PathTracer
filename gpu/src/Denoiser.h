@@ -16,7 +16,7 @@ using OptixDeviceContext = OptixDeviceContext_t *;
 struct OptixDenoiser_t;
 using OptixDenoiser = OptixDenoiser_t *;
 
-namespace mypt {
+namespace pt {
 
   class Denoiser {
   public:
@@ -57,4 +57,4 @@ namespace mypt {
     size_t             scratchBytes_ = 0;
   };
 
-} // namespace mypt
+} // namespace pt

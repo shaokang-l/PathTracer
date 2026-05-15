@@ -7,7 +7,7 @@
 #include <sstream>
 #include <stdexcept>
 
-namespace mypt {
+namespace pt {
 namespace {
 
   static std::string xmlEscape(const std::string &s)
@@ -180,4 +180,4 @@ void exportMitsubaXmlScene(const Scene &scene, const std::string &xmlPathString)
       << "</scene>\n";
 }
 
-} // namespace mypt
+} // namespace pt

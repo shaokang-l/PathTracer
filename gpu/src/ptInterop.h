@@ -15,7 +15,7 @@
 
 using namespace owl;
 
-namespace mypt {
+namespace pt {
 
   __both__ inline pt::Vec2f toPtVec(vec2f v)
   {
@@ -47,4 +47,4 @@ namespace mypt {
     return static_cast<pt::DirectLightMode>(value);
   }
 
-} // namespace mypt
+} // namespace pt

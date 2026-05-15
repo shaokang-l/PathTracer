@@ -2,7 +2,7 @@
 
 #include <owl/common/math/vec.h>
 
-namespace mypt {
+namespace pt {
   using owl::vec3f;
   using owl::normalize;
   using owl::cross;
@@ -59,4 +59,4 @@ namespace mypt {
     __both__ inline bool  sameHemisphere(vec3f w1, vec3f w2) { return w1.z * w2.z > 0.f; }
   } // namespace local
 
-} // namespace mypt
+} // namespace pt

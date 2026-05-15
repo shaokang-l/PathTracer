@@ -1,6 +1,6 @@
 #include "scene/Scene.h"
 
-namespace mypt {
+namespace pt {
 
   void Scene::computeBounds()
   {
@@ -10,4 +10,4 @@ namespace mypt {
         bounds.extend(v);
   }
 
-} // namespace mypt
+} // namespace pt

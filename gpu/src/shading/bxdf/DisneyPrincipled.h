@@ -10,7 +10,7 @@
 
 #include "pt/material/disney.h"
 
-namespace mypt {
+namespace pt {
 
   struct DisneyPrincipledBxDF {
     vec3f baseColor;
@@ -378,5 +378,5 @@ namespace mypt {
     }
   };
 
-} // namespace mypt
+} // namespace pt
 

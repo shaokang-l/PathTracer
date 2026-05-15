@@ -4,8 +4,8 @@
 
 #include <string>
 
-namespace mypt {
+namespace pt {
 
   void exportMitsubaXmlScene(const Scene &scene, const std::string &xmlPath);
 
-} // namespace mypt
+} // namespace pt

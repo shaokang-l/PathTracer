@@ -10,7 +10,7 @@
 
 using namespace owl;
 
-namespace mypt {
+namespace pt {
 
 enum LightKind : int {
   LIGHT_QUAD = 0,
@@ -61,4 +61,4 @@ __both__ inline bool sampleLight(const LightGPU* lights,
   }
 }
 
-} // namespace mypt
+} // namespace pt

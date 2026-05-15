@@ -8,7 +8,7 @@
 // converts the sampled wi back to world space. f and pdf are space-
 // invariant and pass straight through.
 
-namespace mypt{
+namespace pt{
 
 struct BSDF{
     OrthoBasis basis;
@@ -40,8 +40,8 @@ struct BSDF{
     }
 
     __device__ inline bool hasNonDelta() const {
-        return mypt::hasNonDelta(flags());
+        return pt::hasNonDelta(flags());
     }
 };
 
-} // namespace mypt
+} // namespace pt

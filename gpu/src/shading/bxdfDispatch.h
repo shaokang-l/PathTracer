@@ -24,7 +24,7 @@
 #include "shading/bxdf/ThinDielectric.h"
 #include "shading/bxdf/DisneyPrincipled.h"
 
-namespace mypt {
+namespace pt {
 
   __both__ inline bool sampleBxDF(const MaterialGPU &mat,
                                   const vec3f       &wo,   // local
@@ -152,4 +152,4 @@ namespace mypt {
     }
   }
 
-} // namespace mypt
+} // namespace pt

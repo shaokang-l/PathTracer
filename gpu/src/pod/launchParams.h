@@ -43,15 +43,15 @@ struct LaunchParams {
 
   // Global material buffer, indexed by TriangleMeshSBT::materialId.
   MaterialGPU         *materials;
-  mypt::LightGPU      *lights;
+  pt::LightGPU      *lights;
   int                  lightCount;
 
   // ReSTIR DI state. Stage B uses ping-pong buffers: current is written by
   // this launch, previous is read-only history from the last accumulated frame.
   pt::RestirReservoir *restirReservoirs;
   pt::RestirReservoir *prevRestirReservoirs;
-  mypt::RestirSurfaceData *restirSurfaceData;
-  mypt::RestirSurfaceData *prevRestirSurfaceData;
+  pt::RestirSurfaceData *restirSurfaceData;
+  pt::RestirSurfaceData *prevRestirSurfaceData;
 
   int                  accumID;       // frames accumulated so far
   int                  samplesPerPixel;

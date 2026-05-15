@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-namespace mypt {
+namespace pt {
 
   using namespace scene_detail;
 
@@ -404,4 +404,4 @@ namespace mypt {
     return s;
   }
 
-} // namespace mypt
+} // namespace pt

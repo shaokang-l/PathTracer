@@ -16,7 +16,7 @@
 
 extern "C" char deviceCode_ptx[];
 
-namespace mypt {
+namespace pt {
 
   using owl::vec2i;
   using owl::vec3f;
@@ -401,4 +401,4 @@ namespace mypt {
     ++accumID_;
   }
 
-} // namespace mypt
+} // namespace pt

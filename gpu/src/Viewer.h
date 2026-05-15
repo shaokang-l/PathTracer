@@ -14,7 +14,7 @@
 
 #include <string>
 
-namespace mypt {
+namespace pt {
 
   class Viewer : public owl::viewer::OWLViewer {
   public:
@@ -34,4 +34,4 @@ namespace mypt {
     owl::vec2i currentSize_ = owl::vec2i(0, 0);
   };
 
-} // namespace mypt
+} // namespace pt

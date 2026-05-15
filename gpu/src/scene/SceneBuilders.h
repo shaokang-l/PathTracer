@@ -15,7 +15,7 @@
 #define PATHTRACER_ASSET_DIR "assets"
 #endif
 
-namespace mypt {
+namespace pt {
 namespace scene_detail {
 
   enum class ObjUpAxis {
@@ -84,4 +84,4 @@ namespace scene_detail {
   void boostDisneyTransmissionForLab(MaterialGPU &m);
 
 } // namespace scene_detail
-} // namespace mypt
+} // namespace pt

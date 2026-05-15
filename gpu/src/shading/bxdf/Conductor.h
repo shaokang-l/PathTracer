@@ -8,7 +8,7 @@
 #include "../bsdfSample.h"
 #include "../bxdfFlags.h"
 
-namespace mypt {
+namespace pt {
 
   struct ConductorBxDF {
     vec3f eta;
@@ -78,5 +78,5 @@ namespace mypt {
     }
   };
 
-} // namespace mypt
+} // namespace pt
 

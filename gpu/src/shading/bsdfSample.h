@@ -12,7 +12,7 @@
 #include <owl/common/math/vec.h>
 #include "shading/bxdfFlags.h"
 
-namespace mypt {
+namespace pt {
 
   struct BSDFSample {
     owl::vec3f f;     // BSDF value (space-invariant)
@@ -21,4 +21,4 @@ namespace mypt {
     BxDFFlags  flag;  // lobe flags (specular, diffuse, transmission, ...)
   };
 
-} // namespace mypt
+} // namespace pt

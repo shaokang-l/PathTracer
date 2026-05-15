@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <cuda_runtime.h>
 
-namespace mypt {
+namespace pt {
 
   /*! Tone-map + gamma + RGBA8 pack. Reads `width*height`
       HDR float4 pixels from `hdrIn` and writes packed RGBA8 to `fbOut`.
@@ -24,4 +24,4 @@ namespace mypt {
                      bool          useReinhard,
                      cudaStream_t  stream);
 
-} // namespace mypt
+} // namespace pt

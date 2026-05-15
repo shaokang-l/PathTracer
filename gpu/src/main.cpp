@@ -106,21 +106,21 @@ namespace {
     return {};
   }
 
-  mypt::Scene loadSceneFromArgs(int argc, char **argv)
+  pt::Scene loadSceneFromArgs(int argc, char **argv)
   {
     for (int i = 1; i + 1 < argc; ++i) {
       if (std::string_view(argv[i]) == "--scene-xml") {
-        return mypt::Scene::loadMitsubaXml(argv[i + 1]);
+        return pt::Scene::loadMitsubaXml(argv[i + 1]);
       }
       if (std::string_view(argv[i]) == "--scene") {
         const std::string_view name(argv[i + 1]);
-        if (name == "disney-cornell") return mypt::Scene::makeDisneyCornellScene();
+        if (name == "disney-cornell") return pt::Scene::makeDisneyCornellScene();
         if (name == "disney-gallery")
-          return mypt::Scene::makeDisneyPrincipledGalleryScene();
-        if (name == "disney-lab") return mypt::Scene::makeDisneyMaterialLabScene();
+          return pt::Scene::makeDisneyPrincipledGalleryScene();
+        if (name == "disney-lab") return pt::Scene::makeDisneyMaterialLabScene();
       }
     }
-    return mypt::Scene::makeDisneyMaterialLabScene();
+    return pt::Scene::makeDisneyMaterialLabScene();
   }
 
   bool saveDeviceFrameBuffer(const std::string &path,
@@ -147,9 +147,9 @@ namespace {
     return ok != 0;
   }
 
-  void setDefaultCamera(mypt::Renderer &renderer,
+  void setDefaultCamera(pt::Renderer &renderer,
                         const pt::RenderSettings &settings,
-                        const mypt::Scene &scene,
+                        const pt::Scene &scene,
                         float fovyDegrees = 45.f)
   {
     if (settings.hasCameraOverride) {
@@ -189,10 +189,10 @@ int main(int argc, char **argv)
     maxFrames = 1;
   }
 
-  mypt::Scene scene = loadSceneFromArgs(argc, argv);
+  pt::Scene scene = loadSceneFromArgs(argc, argv);
   const std::string_view exportXmlPath = parseExportSceneXmlArg(argc, argv);
   if (!exportXmlPath.empty()) {
-    mypt::exportMitsubaXmlScene(scene, std::string(exportXmlPath));
+    pt::exportMitsubaXmlScene(scene, std::string(exportXmlPath));
     std::cout << "[mypt] exported scene XML: " << exportXmlPath << std::endl;
     return 0;
   }
@@ -214,7 +214,7 @@ int main(int argc, char **argv)
   defaultSettings.restirMaxHistory = 20;
   pt::RenderSettings settings = pt::parseRenderSettings(argc, argv, defaultSettings);
 
-  mypt::Renderer renderer;
+  pt::Renderer renderer;
   renderer.setSamplesPerPixel(settings.spp);
   renderer.setMaxBounces(settings.maxDepth);
   renderer.setMissColor(owl::vec3f(settings.background.x,
@@ -256,7 +256,7 @@ int main(int argc, char **argv)
     return ok ? 0 : 2;
   }
 
-  mypt::Viewer viewer(renderer, scene.bounds, owl::vec2i(width, height), visible);
+  pt::Viewer viewer(renderer, scene.bounds, owl::vec2i(width, height), visible);
   viewer.enableFlyMode();
   viewer.enableInspectMode(owl::box3f(scene.bounds.lower, scene.bounds.upper));
 

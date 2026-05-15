@@ -14,7 +14,7 @@
 #include <utility>
 #include <vector>
 
-namespace mypt {
+namespace pt {
 namespace {
 
   struct XmlElement {
@@ -594,5 +594,5 @@ Scene Scene::loadMitsubaXml(const std::string &path)
   return scene;
 }
 
-} // namespace mypt
+} // namespace pt
 

@@ -22,7 +22,7 @@
 #include <owl/owl.h>
 #include <vector>
 
-namespace mypt {
+namespace pt {
 
   class Renderer {
   public:
@@ -143,4 +143,4 @@ namespace mypt {
     bool             hasScene_      = false;
   };
 
-} // namespace mypt
+} // namespace pt

@@ -9,7 +9,7 @@ enum RayType : int {
 #ifdef __CUDACC__
 #include <owl/owl_device.h>
 
-namespace mypt {
+namespace pt {
   using RadianceRay = owl::RayT<RADIANCE_RAY_TYPE, RAY_TYPE_COUNT>;
   using ShadowRay   = owl::RayT<SHADOW_RAY_TYPE,   RAY_TYPE_COUNT>;
 }

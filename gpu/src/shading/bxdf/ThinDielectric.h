@@ -8,7 +8,7 @@
 #include "../bsdfSample.h"
 #include "../bxdfFlags.h"
 
-namespace mypt {
+namespace pt {
 
   struct ThinDielectricBxDF {
     float ior;
@@ -53,5 +53,5 @@ namespace mypt {
     }
   };
 
-} // namespace mypt
+} // namespace pt
 

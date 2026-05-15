@@ -1,7 +1,7 @@
 #pragma once
 #include <owl/common/math/vec.h>
 
-namespace mypt {
+namespace pt {
 
     enum BxDFFlags : uint32_t {
       NONE                  = 0,
@@ -26,4 +26,4 @@ namespace mypt {
     __both__ inline bool isTransmission(uint32_t f) { return f & TRANSMISSION; }
     __both__ inline bool hasNonDelta(uint32_t f) { return isDiffuse(f) || isGlossy(f); }
     
-} // namespace mypt
+} // namespace pt
