@@ -10,7 +10,7 @@
 #pragma once
 
 #include <owl/common/math/vec.h>
-#include "bxdfFlags.h"
+#include "shading/bxdfFlags.h"
 
 namespace mypt {
 

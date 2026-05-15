@@ -1,4 +1,4 @@
-#include "Scene.h"
+#include "scene/Scene.h"
 #include "pt/scene/mitsuba_xml.h"
 
 #include <algorithm>

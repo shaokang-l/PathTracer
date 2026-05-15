@@ -1,6 +1,6 @@
 #pragma once
-#include "bxdfDispatch.h"
-#include "orthoBasis.h"
+#include "shading/bxdfDispatch.h"
+#include "shading/orthoBasis.h"
 
 // World-space BSDF wrapper. Holds a shading frame + a pointer into the
 // global material buffer; on each call it does world->local conversion,

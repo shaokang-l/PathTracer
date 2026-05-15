@@ -38,27 +38,27 @@ struct LightSample {
 
 // Uniformly choose one light from the light list.
 __both__ inline bool sampleLight(const LightGPU* lights,
-                                    int lightCount,
-                                    float uLight,
-                                    vec2f uSurface,
-                                    LightSample &out)
+                                 int lightCount,
+                                 float uLight,
+                                 vec2f uSurface,
+                                 LightSample &out)
 {
-    if (!lights || lightCount <= 0) return false;
-    int lightID = int(uLight * lightCount);
-    if (lightID >= lightCount) lightID = lightCount - 1;
-    const LightGPU &light = lights[lightID];
-    switch (light.kind) {
-    case LIGHT_QUAD:
-      out.p = light.v0 + uSurface.x * light.edgeU + uSurface.y * light.edgeV;
-      out.n = light.normal;
-      out.Le = light.emission;
-      if (light.area <= 0.f) return false;
-      out.pdfA = (1.f / float(lightCount)) * (1.f / light.area);
-      out.lightId = lightID;
-      return true;
-    default:
-      return false;
-    }
+  if (!lights || lightCount <= 0) return false;
+  int lightID = int(uLight * lightCount);
+  if (lightID >= lightCount) lightID = lightCount - 1;
+  const LightGPU &light = lights[lightID];
+  switch (light.kind) {
+  case LIGHT_QUAD:
+    out.p = light.v0 + uSurface.x * light.edgeU + uSurface.y * light.edgeV;
+    out.n = light.normal;
+    out.Le = light.emission;
+    if (light.area <= 0.f) return false;
+    out.pdfA = (1.f / float(lightCount)) * (1.f / light.area);
+    out.lightId = lightID;
+    return true;
+  default:
+    return false;
+  }
 }
 
 } // namespace mypt

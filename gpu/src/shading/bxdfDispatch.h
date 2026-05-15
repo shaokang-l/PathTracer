@@ -15,14 +15,14 @@
 
 #pragma once
 
-#include "material.h"
-#include "bsdfSample.h"
-#include "bxdf/Lambertian.h"
-#include "bxdf/Mirror.h"
-#include "bxdf/Dielectric.h"
-#include "bxdf/Conductor.h"
-#include "bxdf/ThinDielectric.h"
-#include "bxdf/DisneyPrincipled.h"
+#include "pod/material.h"
+#include "shading/bsdfSample.h"
+#include "shading/bxdf/Lambertian.h"
+#include "shading/bxdf/Mirror.h"
+#include "shading/bxdf/Dielectric.h"
+#include "shading/bxdf/Conductor.h"
+#include "shading/bxdf/ThinDielectric.h"
+#include "shading/bxdf/DisneyPrincipled.h"
 
 namespace mypt {
 

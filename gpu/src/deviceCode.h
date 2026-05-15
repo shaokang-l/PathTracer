@@ -10,9 +10,9 @@
 
 #pragma once
 
-#include "geometryData.h"
-#include "launchParams.h"
-#include "material.h"
-#include "rayTypes.h"
+#include "pod/geometryData.h"
+#include "pod/launchParams.h"
+#include "pod/material.h"
+#include "pod/rayTypes.h"
 #include "pt/restir/reservoir.h"
 #include "pt/restir/target.h"

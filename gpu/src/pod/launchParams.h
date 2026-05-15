@@ -7,8 +7,9 @@
 
 #pragma once
 
-#include "light.h"
-#include "material.h"
+#include "pod/light.h"
+#include "pod/material.h"
+#include "pod/restirState.h"
 
 #include <cstdint>
 #include <owl/owl.h>
@@ -44,6 +45,12 @@ struct LaunchParams {
   MaterialGPU         *materials;
   mypt::LightGPU      *lights;
   int                  lightCount;
+
+  // Stage A ReSTIR DI state: current-frame only.
+  // TODO(ReSTIR temporal): add previous buffers and ping-pong once temporal
+  // reuse is implemented.
+  pt::RestirReservoir *restirReservoirs;
+  mypt::RestirSurfaceData *restirSurfaceData;
 
   int                  accumID;       // frames accumulated so far
   int                  samplesPerPixel;

@@ -17,6 +17,10 @@ namespace {
     case pt::DebugViewKind::Visibility: return "visibility";
     case pt::DebugViewKind::MaterialId: return "material-id";
     case pt::DebugViewKind::LightId: return "light-id";
+    case pt::DebugViewKind::ReservoirWeight: return "reservoir-weight";
+    case pt::DebugViewKind::ReservoirM: return "reservoir-m";
+    case pt::DebugViewKind::ReservoirTarget: return "reservoir-target";
+    case pt::DebugViewKind::RestirLightId: return "restir-light-id";
     default: return "unknown";
     }
   }
@@ -30,6 +34,10 @@ namespace {
     case '4': view = pt::DebugViewKind::Visibility; return true;
     case '5': view = pt::DebugViewKind::MaterialId; return true;
     case '6': view = pt::DebugViewKind::LightId; return true;
+    case '7': view = pt::DebugViewKind::ReservoirWeight; return true;
+    case '8': view = pt::DebugViewKind::ReservoirM; return true;
+    case '9': view = pt::DebugViewKind::ReservoirTarget; return true;
+    case '0': view = pt::DebugViewKind::RestirLightId; return true;
     default: return false;
     }
   }

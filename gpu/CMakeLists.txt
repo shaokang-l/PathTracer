@@ -54,12 +54,14 @@ embed_ptx(
 
 target_include_directories(mypt-ptx
   PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/common/include
 )
 
 if(TARGET mypt-ptx_ptx)
   target_include_directories(mypt-ptx_ptx
     PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src
       ${CMAKE_SOURCE_DIR}/common/include
   )
 endif()
@@ -68,9 +70,11 @@ add_executable(mypt
   src/main.cpp
   src/Denoiser.cpp
   src/Renderer.cpp
-  src/Scene.cpp
-  src/SceneExport.cpp
-  src/SceneXml.cpp
+  src/scene/SceneCore.cpp
+  src/scene/SceneGeometry.cpp
+  src/scene/BuiltinScenes.cpp
+  src/scene/SceneExport.cpp
+  src/scene/SceneXml.cpp
   src/Viewer.cpp
   src/postprocess.cu
 )

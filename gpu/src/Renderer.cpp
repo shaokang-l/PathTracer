@@ -1,10 +1,10 @@
 #include "Renderer.h"
 
-#include "geometryData.h"
-#include "launchParams.h"
+#include "pod/launchParams.h"
 #include "owl/owl_host.h"
+#include "pod/geometryData.h"
 #include "postprocess.h"
-#include "rayTypes.h"
+#include "pod/rayTypes.h"
 
 #include <algorithm>
 #include <cmath>
@@ -86,6 +86,10 @@ namespace mypt {
       { "materials",      OWL_RAW_POINTER, OWL_OFFSETOF(LaunchParams, materials)      },
       { "lights",         OWL_RAW_POINTER, OWL_OFFSETOF(LaunchParams, lights)         },
       { "lightCount",     OWL_INT,         OWL_OFFSETOF(LaunchParams, lightCount)     },
+      { "restirReservoirs",
+                          OWL_RAW_POINTER, OWL_OFFSETOF(LaunchParams, restirReservoirs)},
+      { "restirSurfaceData",
+                          OWL_RAW_POINTER, OWL_OFFSETOF(LaunchParams, restirSurfaceData)},
       { "accumID",        OWL_INT,         OWL_OFFSETOF(LaunchParams, accumID)        },
       { "samplesPerPixel",OWL_INT,         OWL_OFFSETOF(LaunchParams, samplesPerPixel)},
       { "maxBounces",     OWL_INT,         OWL_OFFSETOF(LaunchParams, maxBounces)     },
@@ -173,6 +177,18 @@ namespace mypt {
     if (accumBuffer_) owlBufferRelease(accumBuffer_);
     accumBuffer_ = owlDeviceBufferCreate(ctx_, OWL_FLOAT4,
                                          fbSize.x * fbSize.y, nullptr);
+
+    if (restirReservoirBuffer_) owlBufferRelease(restirReservoirBuffer_);
+    restirReservoirBuffer_ = owlDeviceBufferCreate(ctx_,
+                                                   OWL_USER_TYPE(pt::RestirReservoir),
+                                                   fbSize.x * fbSize.y,
+                                                   nullptr);
+
+    if (restirSurfaceBuffer_) owlBufferRelease(restirSurfaceBuffer_);
+    restirSurfaceBuffer_ = owlDeviceBufferCreate(ctx_,
+                                                 OWL_USER_TYPE(RestirSurfaceData),
+                                                 fbSize.x * fbSize.y,
+                                                 nullptr);
     resetAccum();
   }
 
@@ -259,6 +275,14 @@ namespace mypt {
         ? owlBufferGetPointer(lightBuffer_, 0)
         : 0));
     owlParamsSet1i (lp_, "lightCount", lightCount_);
+    owlParamsSet1ul(lp_, "restirReservoirs",
+      (uint64_t)(restirReservoirBuffer_
+        ? owlBufferGetPointer(restirReservoirBuffer_, 0)
+        : 0));
+    owlParamsSet1ul(lp_, "restirSurfaceData",
+      (uint64_t)(restirSurfaceBuffer_
+        ? owlBufferGetPointer(restirSurfaceBuffer_, 0)
+        : 0));
     owlParamsSet1i (lp_, "accumID", accumID_);
     owlParamsSet1i (lp_, "samplesPerPixel", samplesPerPixel_);
     owlParamsSet1i (lp_, "maxBounces", maxBounces_);

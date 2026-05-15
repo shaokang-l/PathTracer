@@ -117,6 +117,14 @@ inline RenderSettings parseRenderSettings(int argc, char **argv, const RenderSet
     settings.debugView = DebugViewKind::MaterialId;
   } else if (debugView == "light-id" || debugView == "light_id") {
     settings.debugView = DebugViewKind::LightId;
+  } else if (debugView == "reservoir-weight" || debugView == "reservoir_weight") {
+    settings.debugView = DebugViewKind::ReservoirWeight;
+  } else if (debugView == "reservoir-m" || debugView == "reservoir_m") {
+    settings.debugView = DebugViewKind::ReservoirM;
+  } else if (debugView == "reservoir-target" || debugView == "reservoir_target") {
+    settings.debugView = DebugViewKind::ReservoirTarget;
+  } else if (debugView == "restir-light-id" || debugView == "restir_light_id") {
+    settings.debugView = DebugViewKind::RestirLightId;
   } else {
     settings.debugView = DebugViewKind::Beauty;
   }

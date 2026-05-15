@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../../../common/include/pt/common/compiler.h"
+#include "pt/common/compiler.h"
 #include "../utils.h"
 
-#include "../../../common/include/pt/material/fresnel.h"
-#include "../../../common/include/pt/material/trowbridge_reitz.h"
+#include "pt/material/fresnel.h"
+#include "pt/material/trowbridge_reitz.h"
 
 namespace mypt {
 

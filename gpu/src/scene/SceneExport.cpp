@@ -1,4 +1,4 @@
-#include "SceneExport.h"
+#include "scene/SceneExport.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -181,4 +181,3 @@ void exportMitsubaXmlScene(const Scene &scene, const std::string &xmlPathString)
 }
 
 } // namespace mypt
-

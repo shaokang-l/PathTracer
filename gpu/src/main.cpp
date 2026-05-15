@@ -4,8 +4,8 @@
 // ======================================================================== //
 
 #include "Renderer.h"
-#include "Scene.h"
-#include "SceneExport.h"
+#include "scene/Scene.h"
+#include "scene/SceneExport.h"
 #include "Viewer.h"
 #include "pt/scene/render_settings.h"
 
@@ -208,6 +208,8 @@ int main(int argc, char **argv)
   defaultSettings.spp = 1;
   defaultSettings.maxDepth = 8;
   defaultSettings.toneMap = pt::ToneMapKind::Reinhard;
+  defaultSettings.directLightMode = pt::DirectLightMode::Restir;
+  defaultSettings.restirInitialCandidates = 16;
   pt::RenderSettings settings = pt::parseRenderSettings(argc, argv, defaultSettings);
 
   mypt::Renderer renderer;

@@ -8,7 +8,7 @@
 #include "../bsdfSample.h"
 #include "../bxdfFlags.h"
 
-#include "../../../common/include/pt/material/disney.h"
+#include "pt/material/disney.h"
 
 namespace mypt {
 

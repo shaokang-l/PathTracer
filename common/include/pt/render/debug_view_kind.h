@@ -9,6 +9,10 @@ enum class DebugViewKind : int {
   Visibility = 3,
   MaterialId = 4,
   LightId = 5,
+  ReservoirWeight = 6,
+  ReservoirM = 7,
+  ReservoirTarget = 8,
+  RestirLightId = 9,
 };
 
 } // namespace pt

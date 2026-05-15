@@ -16,7 +16,7 @@
 #pragma once
 
 #include "Denoiser.h"
-#include "Scene.h"
+#include "scene/Scene.h"
 #include "pt/scene/render_settings.h"
 
 #include <owl/owl.h>
@@ -108,6 +108,8 @@ namespace mypt {
     OWLBuffer        accumBuffer_   = nullptr;
     OWLBuffer        materialBuffer_ = nullptr;
     OWLBuffer        lightBuffer_    = nullptr;
+    OWLBuffer        restirReservoirBuffer_ = nullptr;
+    OWLBuffer        restirSurfaceBuffer_ = nullptr;
     Denoiser         denoiser_;
     bool             denoiserEnabled_ = true;
     int              denoiserMinAccumulatedSpp_ = 32;
