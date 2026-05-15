@@ -27,6 +27,8 @@ struct RenderSettings {
   DebugViewKind debugView = DebugViewKind::Beauty;
   DirectLightMode directLightMode = DirectLightMode::Nee;
   int restirInitialCandidates = 1;
+  bool restirTemporal = false;
+  int restirMaxHistory = 20;
   Vec3f background = Vec3f(0.f);
 
   bool hasCameraOverride = false;
@@ -139,6 +141,11 @@ inline RenderSettings parseRenderSettings(int argc, char **argv, const RenderSet
                 "--restir-initial-candidates",
                 settings.restirInitialCandidates);
   settings.restirInitialCandidates = std::max(1, settings.restirInitialCandidates);
+  settings.restirTemporal =
+    parseIntArg(argc, argv, "--restir-temporal", settings.restirTemporal ? 1 : 0) != 0;
+  settings.restirMaxHistory =
+    parseIntArg(argc, argv, "--restir-max-history", settings.restirMaxHistory);
+  settings.restirMaxHistory = std::max(1, settings.restirMaxHistory);
 
   settings.hasCameraOverride =
     hasArg(argc, argv, "--camera-origin") || hasArg(argc, argv, "--camera-target");

@@ -58,7 +58,10 @@ namespace mypt {
     void setMaxBounces(int b)        { maxBounces_      = b;   }
     void setMissColor(const owl::vec3f &color);
     void setDebugView(pt::DebugViewKind view);
-    void setDirectLightMode(pt::DirectLightMode mode, int restirInitialCandidates);
+    void setDirectLightMode(pt::DirectLightMode mode,
+                            int restirInitialCandidates,
+                            bool restirTemporal,
+                            int restirMaxHistory);
     void setOutputTransform(float gamma, bool useReinhard)
     {
       gamma_ = gamma;
@@ -124,6 +127,8 @@ namespace mypt {
     pt::DebugViewKind debugView_      = pt::DebugViewKind::Beauty;
     pt::DirectLightMode directLightMode_ = pt::DirectLightMode::Nee;
     int              restirInitialCandidates_ = 1;
+    bool             restirTemporal_ = false;
+    int              restirMaxHistory_ = 20;
     owl::vec3f       missColor_       = owl::vec3f(0.f);
     float            gamma_           = 2.2f;
     bool             useReinhardTonemap_ = true;

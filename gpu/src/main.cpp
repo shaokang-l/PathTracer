@@ -210,6 +210,8 @@ int main(int argc, char **argv)
   defaultSettings.toneMap = pt::ToneMapKind::Reinhard;
   defaultSettings.directLightMode = pt::DirectLightMode::Restir;
   defaultSettings.restirInitialCandidates = 16;
+  defaultSettings.restirTemporal = false;
+  defaultSettings.restirMaxHistory = 20;
   pt::RenderSettings settings = pt::parseRenderSettings(argc, argv, defaultSettings);
 
   mypt::Renderer renderer;
@@ -220,7 +222,9 @@ int main(int argc, char **argv)
                                    settings.background.z));
   renderer.setDebugView(settings.debugView);
   renderer.setDirectLightMode(settings.directLightMode,
-                              settings.restirInitialCandidates);
+                              settings.restirInitialCandidates,
+                              settings.restirTemporal,
+                              settings.restirMaxHistory);
   renderer.setOutputTransform(settings.gamma, settings.toneMap == pt::ToneMapKind::Reinhard);
   renderer.setScene(scene);
 

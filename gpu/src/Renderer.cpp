@@ -97,6 +97,9 @@ namespace mypt {
       { "directLightMode", OWL_INT,         OWL_OFFSETOF(LaunchParams, directLightMode)},
       { "restirInitialCandidates",
                           OWL_INT,         OWL_OFFSETOF(LaunchParams, restirInitialCandidates)},
+      { "restirTemporal", OWL_INT,          OWL_OFFSETOF(LaunchParams, restirTemporal)},
+      { "restirMaxHistory",
+                          OWL_INT,         OWL_OFFSETOF(LaunchParams, restirMaxHistory)},
       { "world",          OWL_GROUP,       OWL_OFFSETOF(LaunchParams, world)          },
       { "camera.pos",     OWL_FLOAT3,      OWL_OFFSETOF(LaunchParams, camera.pos)     },
       { "camera.dir_00",  OWL_FLOAT3,      OWL_OFFSETOF(LaunchParams, camera.dir_00)  },
@@ -229,10 +232,14 @@ namespace mypt {
   }
 
   void Renderer::setDirectLightMode(pt::DirectLightMode mode,
-                                    int restirInitialCandidates)
+                                    int restirInitialCandidates,
+                                    bool restirTemporal,
+                                    int restirMaxHistory)
   {
     directLightMode_ = mode;
     restirInitialCandidates_ = std::max(1, restirInitialCandidates);
+    restirTemporal_ = restirTemporal;
+    restirMaxHistory_ = std::max(1, restirMaxHistory);
     resetAccum();
   }
 
@@ -289,6 +296,8 @@ namespace mypt {
     owlParamsSet1i (lp_, "debugView", static_cast<int>(debugView_));
     owlParamsSet1i (lp_, "directLightMode", static_cast<int>(directLightMode_));
     owlParamsSet1i (lp_, "restirInitialCandidates", restirInitialCandidates_);
+    owlParamsSet1i (lp_, "restirTemporal", restirTemporal_ ? 1 : 0);
+    owlParamsSet1i (lp_, "restirMaxHistory", restirMaxHistory_);
     owlParamsSet3f (lp_, "camera.pos",    owl3f{ cam_.pos.x,    cam_.pos.y,    cam_.pos.z    });
     owlParamsSet3f (lp_, "camera.dir_00", owl3f{ cam_.dir_00.x, cam_.dir_00.y, cam_.dir_00.z });
     owlParamsSet3f (lp_, "camera.dir_du", owl3f{ cam_.dir_du.x, cam_.dir_du.y, cam_.dir_du.z });

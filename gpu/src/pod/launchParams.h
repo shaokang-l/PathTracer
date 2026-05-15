@@ -58,6 +58,8 @@ struct LaunchParams {
   int                  debugView; // pt::DebugViewKind as int
   int                  directLightMode; // pt::DirectLightMode as int
   int                  restirInitialCandidates;
+  int                  restirTemporal; // bool as int; Stage B temporal reuse toggle
+  int                  restirMaxHistory;
 
   OptixTraversableHandle world;
 
