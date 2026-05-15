@@ -46,11 +46,12 @@ struct LaunchParams {
   mypt::LightGPU      *lights;
   int                  lightCount;
 
-  // Stage A ReSTIR DI state: current-frame only.
-  // TODO(ReSTIR temporal): add previous buffers and ping-pong once temporal
-  // reuse is implemented.
+  // ReSTIR DI state. Stage B uses ping-pong buffers: current is written by
+  // this launch, previous is read-only history from the last accumulated frame.
   pt::RestirReservoir *restirReservoirs;
+  pt::RestirReservoir *prevRestirReservoirs;
   mypt::RestirSurfaceData *restirSurfaceData;
+  mypt::RestirSurfaceData *prevRestirSurfaceData;
 
   int                  accumID;       // frames accumulated so far
   int                  samplesPerPixel;

@@ -111,8 +111,8 @@ namespace mypt {
     OWLBuffer        accumBuffer_   = nullptr;
     OWLBuffer        materialBuffer_ = nullptr;
     OWLBuffer        lightBuffer_    = nullptr;
-    OWLBuffer        restirReservoirBuffer_ = nullptr;
-    OWLBuffer        restirSurfaceBuffer_ = nullptr;
+    OWLBuffer        restirReservoirBuffers_[2] = { nullptr, nullptr };
+    OWLBuffer        restirSurfaceBuffers_[2] = { nullptr, nullptr };
     Denoiser         denoiser_;
     bool             denoiserEnabled_ = true;
     int              denoiserMinAccumulatedSpp_ = 32;

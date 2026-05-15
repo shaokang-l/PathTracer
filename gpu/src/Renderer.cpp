@@ -88,8 +88,12 @@ namespace mypt {
       { "lightCount",     OWL_INT,         OWL_OFFSETOF(LaunchParams, lightCount)     },
       { "restirReservoirs",
                           OWL_RAW_POINTER, OWL_OFFSETOF(LaunchParams, restirReservoirs)},
+      { "prevRestirReservoirs",
+                          OWL_RAW_POINTER, OWL_OFFSETOF(LaunchParams, prevRestirReservoirs)},
       { "restirSurfaceData",
                           OWL_RAW_POINTER, OWL_OFFSETOF(LaunchParams, restirSurfaceData)},
+      { "prevRestirSurfaceData",
+                          OWL_RAW_POINTER, OWL_OFFSETOF(LaunchParams, prevRestirSurfaceData)},
       { "accumID",        OWL_INT,         OWL_OFFSETOF(LaunchParams, accumID)        },
       { "samplesPerPixel",OWL_INT,         OWL_OFFSETOF(LaunchParams, samplesPerPixel)},
       { "maxBounces",     OWL_INT,         OWL_OFFSETOF(LaunchParams, maxBounces)     },
@@ -181,17 +185,21 @@ namespace mypt {
     accumBuffer_ = owlDeviceBufferCreate(ctx_, OWL_FLOAT4,
                                          fbSize.x * fbSize.y, nullptr);
 
-    if (restirReservoirBuffer_) owlBufferRelease(restirReservoirBuffer_);
-    restirReservoirBuffer_ = owlDeviceBufferCreate(ctx_,
+    // resize the ping-pong buffers
+    for (int i = 0; i < 2; i++) {
+      if (restirReservoirBuffers_[i]) owlBufferRelease(restirReservoirBuffers_[i]);
+      restirReservoirBuffers_[i] = owlDeviceBufferCreate(ctx_,
                                                    OWL_USER_TYPE(pt::RestirReservoir),
                                                    fbSize.x * fbSize.y,
                                                    nullptr);
 
-    if (restirSurfaceBuffer_) owlBufferRelease(restirSurfaceBuffer_);
-    restirSurfaceBuffer_ = owlDeviceBufferCreate(ctx_,
+      if (restirSurfaceBuffers_[i]) owlBufferRelease(restirSurfaceBuffers_[i]);
+      restirSurfaceBuffers_[i] = owlDeviceBufferCreate(ctx_,
                                                  OWL_USER_TYPE(RestirSurfaceData),
                                                  fbSize.x * fbSize.y,
                                                  nullptr);
+    }
+
     resetAccum();
   }
 
@@ -282,14 +290,39 @@ namespace mypt {
         ? owlBufferGetPointer(lightBuffer_, 0)
         : 0));
     owlParamsSet1i (lp_, "lightCount", lightCount_);
+
+    // set the restir reservoir and surface data buffers
+    const int currentRestirBuffer = accumID_ & 1;
+    const int previousRestirBuffer = 1 - currentRestirBuffer;
+    const bool hasPreviousRestirFrame = accumID_ > 0;
+    // update buffer per-frame
+    OWLBuffer currentReservoirBuffer = restirReservoirBuffers_[currentRestirBuffer];
+    OWLBuffer previousReservoirBuffer = hasPreviousRestirFrame
+      ? restirReservoirBuffers_[previousRestirBuffer]
+      : nullptr;
+    // update buffer per-frame
+    OWLBuffer currentSurfaceBuffer = restirSurfaceBuffers_[currentRestirBuffer];
+    OWLBuffer previousSurfaceBuffer = hasPreviousRestirFrame
+      ? restirSurfaceBuffers_[previousRestirBuffer]
+      : nullptr;
+
     owlParamsSet1ul(lp_, "restirReservoirs",
-      (uint64_t)(restirReservoirBuffer_
-        ? owlBufferGetPointer(restirReservoirBuffer_, 0)
+      (uint64_t)(currentReservoirBuffer
+        ? owlBufferGetPointer(currentReservoirBuffer, 0)
+        : 0));
+    owlParamsSet1ul(lp_, "prevRestirReservoirs",
+      (uint64_t)(previousReservoirBuffer
+        ? owlBufferGetPointer(previousReservoirBuffer, 0)
         : 0));
     owlParamsSet1ul(lp_, "restirSurfaceData",
-      (uint64_t)(restirSurfaceBuffer_
-        ? owlBufferGetPointer(restirSurfaceBuffer_, 0)
+      (uint64_t)(currentSurfaceBuffer
+        ? owlBufferGetPointer(currentSurfaceBuffer, 0)
         : 0));
+    owlParamsSet1ul(lp_, "prevRestirSurfaceData",
+      (uint64_t)(previousSurfaceBuffer
+        ? owlBufferGetPointer(previousSurfaceBuffer, 0)
+        : 0));
+
     owlParamsSet1i (lp_, "accumID", accumID_);
     owlParamsSet1i (lp_, "samplesPerPixel", samplesPerPixel_);
     owlParamsSet1i (lp_, "maxBounces", maxBounces_);
