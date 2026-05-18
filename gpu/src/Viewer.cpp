@@ -24,6 +24,7 @@ namespace {
     case pt::DebugViewKind::PrevRestirLightId: return "prev-restir-light-id";
     case pt::DebugViewKind::TemporalCandidateTarget: return "temporal-candidate-target";
     case pt::DebugViewKind::TemporalTargetRatio: return "temporal-target-ratio";
+    case pt::DebugViewKind::TemporalAccepted: return "temporal-accepted";
     default: return "unknown";
     }
   }
@@ -44,6 +45,7 @@ namespace {
     case 'p': view = pt::DebugViewKind::PrevRestirLightId; return true;
     case 't': view = pt::DebugViewKind::TemporalCandidateTarget; return true;
     case 'r': view = pt::DebugViewKind::TemporalTargetRatio; return true;
+    case 'a': view = pt::DebugViewKind::TemporalAccepted; return true;
     default: return false;
     }
   }

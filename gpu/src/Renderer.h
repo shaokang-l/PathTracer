@@ -127,7 +127,7 @@ namespace pt {
     pt::DebugViewKind debugView_      = pt::DebugViewKind::Beauty;
     pt::DirectLightMode directLightMode_ = pt::DirectLightMode::Nee;
     int              restirInitialCandidates_ = 1;
-    bool             restirTemporal_ = false;
+    bool             restirTemporal_ = true;
     int              restirMaxHistory_ = 20;
     owl::vec3f       missColor_       = owl::vec3f(0.f);
     float            gamma_           = 2.2f;

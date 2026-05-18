@@ -210,7 +210,7 @@ int main(int argc, char **argv)
   defaultSettings.toneMap = pt::ToneMapKind::Reinhard;
   defaultSettings.directLightMode = pt::DirectLightMode::Restir;
   defaultSettings.restirInitialCandidates = 16;
-  defaultSettings.restirTemporal = false;
+  defaultSettings.restirTemporal = true;
   defaultSettings.restirMaxHistory = 20;
   pt::RenderSettings settings = pt::parseRenderSettings(argc, argv, defaultSettings);
 

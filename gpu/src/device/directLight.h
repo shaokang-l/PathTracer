@@ -28,6 +28,21 @@ __device__ inline bool generateDirectLightCandidate(
   vec2f uSurface,
   pt::RestirDirectLightCandidate &out);
 
+__device__ inline bool evaluateReservoirSampleAtCurrentHit(
+  const PRD &prd,
+  const BSDF &bsdf,
+  const vec3f &wo,
+  const pt::RestirLightSample &sample,
+  pt::RestirDirectLightCandidate &out);
+
+__device__ inline bool acceptTemporalReservoirCandidate(
+  const LaunchParams &params,
+  int pxIdx,
+  const PRD &prd,
+  const BSDF &bsdf,
+  const vec3f &wo,
+  pt::RestirDirectLightCandidate &outTemporalCandidate);
+
 // Re-evaluate a previous-frame reservoir sample at the current hit point.
 __device__ inline bool evaluateReservoirSampleAtCurrentHit(
   const PRD &prd,
@@ -65,6 +80,70 @@ __device__ inline bool evaluateReservoirSampleAtCurrentHit(
   out.sample.target = target;
   out.wi = toPtVec(wi);
   out.unshadowedContribution = toPtVec(unshadowedContribution);
+  return true;
+}
+
+__device__ inline bool acceptTemporalReservoirCandidate(
+  const LaunchParams &params,
+  int pxIdx,
+  const PRD &prd,
+  const BSDF &bsdf,
+  const vec3f &wo,
+  pt::RestirDirectLightCandidate &outTemporalCandidate)
+{
+  outTemporalCandidate = pt::RestirDirectLightCandidate();
+
+  // This is same-pixel history validation only. It is useful for static-camera
+  // plumbing and debug views, but camera motion still needs real reprojection.
+  if (!params.restirTemporal ||
+      !params.prevRestirReservoirs ||
+      !params.prevRestirSurfaceData) {
+    return false;
+  }
+
+  const pt::RestirReservoir prevReservoir = params.prevRestirReservoirs[pxIdx];
+  if (prevReservoir.M == 0 ||
+      prevReservoir.W <= 0.f ||
+      prevReservoir.y.target <= 0.f) {
+    return false;
+  }
+
+  const pt::RestirSurfaceData prevSurface = params.prevRestirSurfaceData[pxIdx];
+  if (!prevSurface.valid || !prd.didHit) {
+    return false;
+  }
+
+  if (prevSurface.materialId != prd.materialId) {
+    return false;
+  }
+
+  // Same-pixel history should still describe the same local surface.
+  const float normalAgreement = dot(prevSurface.normal, prd.N);
+  if (normalAgreement < 0.9f) {
+    return false;
+  }
+
+  const vec3f surfaceDelta = prevSurface.hitP - prd.hitP;
+  const float surfaceDist2 = dot(surfaceDelta, surfaceDelta);
+  if (surfaceDist2 > 0.01f) {
+    return false;
+  }
+
+  if (!evaluateReservoirSampleAtCurrentHit(prd,
+                                           bsdf,
+                                           wo,
+                                           prevReservoir.y,
+                                           outTemporalCandidate)) {
+    return false;
+  }
+
+  // Reject samples whose importance changes too drastically at the current hit.
+  const float targetRatio =
+    outTemporalCandidate.sample.target / prevReservoir.y.target;
+  if (targetRatio < 0.1f || targetRatio > 10.f) {
+    return false;
+  }
+
   return true;
 }
 

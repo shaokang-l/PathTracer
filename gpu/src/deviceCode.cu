@@ -165,6 +165,19 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
               continue;
             }
           }
+
+          if (debugView == pt::DebugViewKind::TemporalAccepted) {
+            pt::RestirDirectLightCandidate temporalCandidate;
+            if (acceptTemporalReservoirCandidate(params,
+                                                 pxIdx,
+                                                 prd,
+                                                 bsdf,
+                                                 wo,
+                                                 temporalCandidate)) {
+              L = L + vec3f(1.f);
+              continue;
+            }
+          }
         }
       }
 

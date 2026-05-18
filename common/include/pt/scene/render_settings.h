@@ -18,16 +18,16 @@ enum class ToneMapKind {
 };
 
 struct RenderSettings {
-  int width = 64;
-  int height = 64;
+  int width = 1280;
+  int height = 720;
   int spp = 1;
-  int maxDepth = 4;
+  int maxDepth = 8;
   float gamma = 2.2f;
-  ToneMapKind toneMap = ToneMapKind::Clamp;
+  ToneMapKind toneMap = ToneMapKind::Reinhard;
   DebugViewKind debugView = DebugViewKind::Beauty;
-  DirectLightMode directLightMode = DirectLightMode::Nee;
-  int restirInitialCandidates = 1;
-  bool restirTemporal = false;
+  DirectLightMode directLightMode = DirectLightMode::Restir;
+  int restirInitialCandidates = 16;
+  bool restirTemporal = true;
   int restirMaxHistory = 20;
   Vec3f background = Vec3f(0.f);
 
@@ -50,6 +50,21 @@ inline int parseIntArg(int argc, char **argv, std::string_view name, int fallbac
 {
   for (int i = 1; i + 1 < argc; ++i) {
     if (std::string_view(argv[i]) == name) return std::atoi(argv[i + 1]);
+  }
+  return fallback;
+}
+
+inline bool parseBoolArg(int argc, char **argv, std::string_view name, bool fallback)
+{
+  for (int i = 1; i < argc; ++i) {
+    if (std::string_view(argv[i]) != name) continue;
+    if (i + 1 >= argc) return true;
+
+    const std::string_view value(argv[i + 1]);
+    if (!value.empty() && value.front() == '-') return true;
+    if (value == "true" || value == "on" || value == "yes") return true;
+    if (value == "false" || value == "off" || value == "no") return false;
+    return std::atoi(argv[i + 1]) != 0;
   }
   return fallback;
 }
@@ -135,6 +150,9 @@ inline RenderSettings parseRenderSettings(int argc, char **argv, const RenderSet
   } else if (debugView == "temporal-target-ratio" ||
              debugView == "temporal_target_ratio") {
     settings.debugView = DebugViewKind::TemporalTargetRatio;
+  } else if (debugView == "temporal-accepted" ||
+             debugView == "temporal_accepted") {
+    settings.debugView = DebugViewKind::TemporalAccepted;
   } else {
     settings.debugView = DebugViewKind::Beauty;
   }
@@ -150,7 +168,7 @@ inline RenderSettings parseRenderSettings(int argc, char **argv, const RenderSet
                 settings.restirInitialCandidates);
   settings.restirInitialCandidates = std::max(1, settings.restirInitialCandidates);
   settings.restirTemporal =
-    parseIntArg(argc, argv, "--restir-temporal", settings.restirTemporal ? 1 : 0) != 0;
+    parseBoolArg(argc, argv, "--restir-temporal", settings.restirTemporal);
   settings.restirMaxHistory =
     parseIntArg(argc, argv, "--restir-max-history", settings.restirMaxHistory);
   settings.restirMaxHistory = std::max(1, settings.restirMaxHistory);

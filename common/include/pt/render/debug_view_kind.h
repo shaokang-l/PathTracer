@@ -16,6 +16,7 @@ enum class DebugViewKind : int {
   PrevRestirLightId = 10,
   TemporalCandidateTarget = 11,
   TemporalTargetRatio = 12,
+  TemporalAccepted = 13,
 };
 
 } // namespace pt

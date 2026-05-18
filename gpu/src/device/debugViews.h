@@ -41,7 +41,8 @@ __device__ inline bool isRestirDebugView(pt::DebugViewKind debugView)
          debugView == pt::DebugViewKind::RestirLightId ||
          debugView == pt::DebugViewKind::PrevRestirLightId ||
          debugView == pt::DebugViewKind::TemporalCandidateTarget ||
-         debugView == pt::DebugViewKind::TemporalTargetRatio;
+         debugView == pt::DebugViewKind::TemporalTargetRatio ||
+         debugView == pt::DebugViewKind::TemporalAccepted;
 }
 
 __device__ inline float compressDebugScalar(float v)
@@ -66,7 +67,8 @@ __device__ inline vec3f shadeRestirDebugView(const LaunchParams &params,
 
   // These views are handled in raygen after reconstructing the current BSDF.
   if (debugView == pt::DebugViewKind::TemporalCandidateTarget ||
-      debugView == pt::DebugViewKind::TemporalTargetRatio) {
+      debugView == pt::DebugViewKind::TemporalTargetRatio ||
+      debugView == pt::DebugViewKind::TemporalAccepted) {
     return vec3f(0.f);
   }
 
