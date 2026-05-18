@@ -112,6 +112,9 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
   if (params.restirSurfaceData) {
     params.restirSurfaceData[pxIdx] = RestirSurfaceData();
   }
+  if (params.restirSelectionSources) {
+    params.restirSelectionSources[pxIdx] = 0;
+  }
 
   for (int s = 0; s < spp; ++s) {
     const vec2f jitter = debugMode ? vec2f(0.5f) : vec2f(rng(), rng());

@@ -58,6 +58,58 @@ TEST(RestirReservoir, ZeroWeightCandidateIsSafe)
   EXPECT_EQ(reservoir.y.lightId, -1);
 }
 
+TEST(RestirReservoir, RepresentedCandidateUsesResamplingWeight)
+{
+  pt::RestirReservoir reservoir;
+  const pt::RestirLightSample previousSample = makeSample(4, 2.f, 0.25f);
+
+  const bool replaced =
+    pt::updateReservoirWithRepresentedCandidate(reservoir,
+                                                previousSample,
+                                                /*currentTarget=*/3.f,
+                                                /*resamplingWeight=*/4.f,
+                                                /*representedM=*/5u,
+                                                /*u=*/0.f);
+  pt::finalizeReservoir(reservoir);
+
+  EXPECT_TRUE(replaced);
+  EXPECT_EQ(reservoir.M, 5u);
+  EXPECT_FLOAT_EQ(reservoir.wSum, 60.f);
+  EXPECT_EQ(reservoir.y.lightId, 4);
+  EXPECT_FLOAT_EQ(reservoir.y.target, 3.f);
+  EXPECT_FLOAT_EQ(reservoir.W, 4.f);
+}
+
+TEST(RestirReservoir, InvalidRepresentedCandidateDoesNotChangeReservoir)
+{
+  pt::RestirReservoir reservoir;
+  const pt::RestirLightSample sample = makeSample(5, 2.f, 0.25f);
+
+  EXPECT_FALSE(pt::updateReservoirWithRepresentedCandidate(reservoir,
+                                                          sample,
+                                                          /*currentTarget=*/3.f,
+                                                          /*resamplingWeight=*/0.f,
+                                                          /*representedM=*/5u,
+                                                          /*u=*/0.f));
+  EXPECT_FALSE(pt::updateReservoirWithRepresentedCandidate(reservoir,
+                                                          sample,
+                                                          /*currentTarget=*/0.f,
+                                                          /*resamplingWeight=*/4.f,
+                                                          /*representedM=*/5u,
+                                                          /*u=*/0.f));
+  EXPECT_FALSE(pt::updateReservoirWithRepresentedCandidate(reservoir,
+                                                          sample,
+                                                          /*currentTarget=*/3.f,
+                                                          /*resamplingWeight=*/4.f,
+                                                          /*representedM=*/0u,
+                                                          /*u=*/0.f));
+
+  EXPECT_EQ(reservoir.M, 0u);
+  EXPECT_FLOAT_EQ(reservoir.wSum, 0.f);
+  EXPECT_FLOAT_EQ(reservoir.W, 0.f);
+  EXPECT_EQ(reservoir.y.lightId, -1);
+}
+
 TEST(RestirReservoir, SelectionProbabilityMatchesWeights)
 {
   std::mt19937 rng(12345u);

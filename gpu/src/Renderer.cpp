@@ -94,6 +94,8 @@ namespace pt {
                           OWL_RAW_POINTER, OWL_OFFSETOF(LaunchParams, restirSurfaceData)},
       { "prevRestirSurfaceData",
                           OWL_RAW_POINTER, OWL_OFFSETOF(LaunchParams, prevRestirSurfaceData)},
+      { "restirSelectionSources",
+                          OWL_RAW_POINTER, OWL_OFFSETOF(LaunchParams, restirSelectionSources)},
       { "accumID",        OWL_INT,         OWL_OFFSETOF(LaunchParams, accumID)        },
       { "samplesPerPixel",OWL_INT,         OWL_OFFSETOF(LaunchParams, samplesPerPixel)},
       { "maxBounces",     OWL_INT,         OWL_OFFSETOF(LaunchParams, maxBounces)     },
@@ -199,6 +201,12 @@ namespace pt {
                                                  fbSize.x * fbSize.y,
                                                  nullptr);
     }
+
+    if (restirSelectionSourceBuffer_) owlBufferRelease(restirSelectionSourceBuffer_);
+    restirSelectionSourceBuffer_ = owlDeviceBufferCreate(ctx_,
+                                                         OWL_INT,
+                                                         fbSize.x * fbSize.y,
+                                                         nullptr);
 
     resetAccum();
   }
@@ -321,6 +329,10 @@ namespace pt {
     owlParamsSet1ul(lp_, "prevRestirSurfaceData",
       (uint64_t)(previousSurfaceBuffer
         ? owlBufferGetPointer(previousSurfaceBuffer, 0)
+        : 0));
+    owlParamsSet1ul(lp_, "restirSelectionSources",
+      (uint64_t)(restirSelectionSourceBuffer_
+        ? owlBufferGetPointer(restirSelectionSourceBuffer_, 0)
         : 0));
 
     owlParamsSet1i (lp_, "accumID", accumID_);

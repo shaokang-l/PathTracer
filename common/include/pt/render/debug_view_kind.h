@@ -17,6 +17,7 @@ enum class DebugViewKind : int {
   TemporalCandidateTarget = 11,
   TemporalTargetRatio = 12,
   TemporalAccepted = 13,
+  TemporalSource = 14,
 };
 
 } // namespace pt

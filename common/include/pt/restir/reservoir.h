@@ -67,6 +67,41 @@ namespace pt {
     return false;
   }
 
+  __both__ inline bool updateReservoirWithCandidate(RestirReservoir &reservoir,
+                                                    const RestirDirectLightCandidate &candidate,
+                                                    float u)
+  {
+    return updateReservoir(reservoir, candidate.sample, reservoirCandidateWeight(candidate.sample), u);
+  }
+
+  // merge reservoir
+  __both__ inline bool updateReservoirWithRepresentedCandidate(
+    RestirReservoir &reservoir,
+    const RestirLightSample &sample,
+    float currentTarget,
+    float resamplingWeight,
+    uint32_t representedM,
+    float u)
+  {
+    if (representedM == 0 || currentTarget <= 0.f || resamplingWeight <= 0.f) {
+      return false;
+    }
+    RestirLightSample currentSample = sample;
+    currentSample.target = currentTarget;
+    const float weight = currentTarget * resamplingWeight * float(representedM);
+    if (weight <= 0.f) {
+      return false;
+    }
+    reservoir.M += representedM;
+    reservoir.wSum += weight;
+    const float replaceProbability = weight / reservoir.wSum;
+    if (u < replaceProbability) {
+      reservoir.y = currentSample;
+      return true;
+    }
+    return false;
+  }
+
   __both__ inline bool updateReservoir(RestirReservoir &reservoir,
                                        const RestirLightSample &sample,
                                        float u)
