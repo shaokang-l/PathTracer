@@ -185,7 +185,12 @@ int main(int argc, char **argv)
 
   int maxFrames = parseFramesArg(argc, argv);
   const std::string_view outputPath = parseStringArg(argc, argv, "--output");
+  const std::string_view outputFramePrefix =
+    parseStringArg(argc, argv, "--output-frame-prefix");
   if (maxFrames < 0 && !outputPath.empty()) {
+    maxFrames = 1;
+  }
+  if (maxFrames < 0 && !outputFramePrefix.empty()) {
     maxFrames = 1;
   }
 
@@ -212,6 +217,7 @@ int main(int argc, char **argv)
   defaultSettings.restirInitialCandidates = 16;
   defaultSettings.restirTemporal = true;
   defaultSettings.restirMaxHistory = 20;
+  defaultSettings.seed = 0;
   pt::RenderSettings settings = pt::parseRenderSettings(argc, argv, defaultSettings);
 
   pt::Renderer renderer;
@@ -225,13 +231,15 @@ int main(int argc, char **argv)
                               settings.restirInitialCandidates,
                               settings.restirTemporal,
                               settings.restirMaxHistory);
+  renderer.setSeed(settings.seed);
+  renderer.setProgressiveAccumulation(settings.progressiveAccumulation);
   renderer.setOutputTransform(settings.gamma, settings.toneMap == pt::ToneMapKind::Reinhard);
   renderer.setScene(scene);
 
   const int width = settings.width;
   const int height = settings.height;
   const bool visible = !hasFlag(argc, argv, "--headless");
-  if (!visible && !outputPath.empty()) {
+  if (!visible && (!outputPath.empty() || !outputFramePrefix.empty())) {
     uint32_t *deviceFb = nullptr;
     const size_t bytes = size_t(width) * size_t(height) * sizeof(uint32_t);
     cudaError_t err = cudaMalloc(reinterpret_cast<void **>(&deviceFb), bytes);
@@ -246,12 +254,23 @@ int main(int argc, char **argv)
     const int frames = std::max(1, maxFrames);
     for (int i = 0; i < frames; ++i) {
       renderer.render();
+      if (!outputFramePrefix.empty()) {
+        const std::string framePath =
+          std::string(outputFramePrefix) + "_" + std::to_string(i + 1) + ".png";
+        if (!saveDeviceFrameBuffer(framePath, deviceFb, width, height)) {
+          cudaFree(deviceFb);
+          return 2;
+        }
+      }
     }
 
-    const bool ok = saveDeviceFrameBuffer(std::string(outputPath),
-                                          deviceFb,
-                                          width,
-                                          height);
+    bool ok = true;
+    if (!outputPath.empty()) {
+      ok = saveDeviceFrameBuffer(std::string(outputPath),
+                                 deviceFb,
+                                 width,
+                                 height);
+    }
     cudaFree(deviceFb);
     return ok ? 0 : 2;
   }

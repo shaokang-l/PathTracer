@@ -62,6 +62,12 @@ namespace pt {
                             int restirInitialCandidates,
                             bool restirTemporal,
                             int restirMaxHistory);
+    void setSeed(int seed) { seed_ = seed; resetAccum(); }
+    void setProgressiveAccumulation(bool enabled)
+    {
+      progressiveAccumulation_ = enabled;
+      resetAccum();
+    }
     void setOutputTransform(float gamma, bool useReinhard)
     {
       gamma_ = gamma;
@@ -130,6 +136,8 @@ namespace pt {
     int              restirInitialCandidates_ = 1;
     bool             restirTemporal_ = true;
     int              restirMaxHistory_ = 20;
+    int              seed_ = 0;
+    bool             progressiveAccumulation_ = true;
     owl::vec3f       missColor_       = owl::vec3f(0.f);
     float            gamma_           = 2.2f;
     bool             useReinhardTonemap_ = true;

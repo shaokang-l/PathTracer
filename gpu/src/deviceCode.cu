@@ -98,7 +98,7 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
   const vec2i pixelID = owl::getLaunchIndex();
   const int   pxIdx   = pixelID.x + params.fbSize.x * pixelID.y;
 
-  RNG rng(pxIdx, params.accumID + 1);
+  RNG rng(pxIdx, params.seed + params.accumID + 1);
 
   vec3f L = vec3f(0.f);
   const pt::DebugViewKind debugView = toDebugViewKind(params.debugView);
@@ -264,7 +264,7 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
   // Raygen now writes the linear-HDR accumulator only; tone-mapping and
   // fbPtr packing live in postprocess.cu so a denoiser (or any other
   // post-process) can slot in between accumulate and display.
-  if (debugMode) {
+  if (debugMode || !params.progressiveAccumulation) {
     params.accumBuffer[pxIdx] = make_float4(L.x, L.y, L.z, 1.f);
     return;
   }

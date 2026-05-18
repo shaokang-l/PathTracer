@@ -106,6 +106,9 @@ namespace pt {
       { "restirTemporal", OWL_INT,          OWL_OFFSETOF(LaunchParams, restirTemporal)},
       { "restirMaxHistory",
                           OWL_INT,         OWL_OFFSETOF(LaunchParams, restirMaxHistory)},
+      { "seed",           OWL_INT,         OWL_OFFSETOF(LaunchParams, seed)           },
+      { "progressiveAccumulation",
+                          OWL_INT,         OWL_OFFSETOF(LaunchParams, progressiveAccumulation)},
       { "world",          OWL_GROUP,       OWL_OFFSETOF(LaunchParams, world)          },
       { "camera.pos",     OWL_FLOAT3,      OWL_OFFSETOF(LaunchParams, camera.pos)     },
       { "camera.dir_00",  OWL_FLOAT3,      OWL_OFFSETOF(LaunchParams, camera.dir_00)  },
@@ -343,6 +346,9 @@ namespace pt {
     owlParamsSet1i (lp_, "restirInitialCandidates", restirInitialCandidates_);
     owlParamsSet1i (lp_, "restirTemporal", restirTemporal_ ? 1 : 0);
     owlParamsSet1i (lp_, "restirMaxHistory", restirMaxHistory_);
+    owlParamsSet1i (lp_, "seed", seed_);
+    owlParamsSet1i (lp_, "progressiveAccumulation",
+                    progressiveAccumulation_ ? 1 : 0);
     owlParamsSet3f (lp_, "camera.pos",    owl3f{ cam_.pos.x,    cam_.pos.y,    cam_.pos.z    });
     owlParamsSet3f (lp_, "camera.dir_00", owl3f{ cam_.dir_00.x, cam_.dir_00.y, cam_.dir_00.z });
     owlParamsSet3f (lp_, "camera.dir_du", owl3f{ cam_.dir_du.x, cam_.dir_du.y, cam_.dir_du.z });

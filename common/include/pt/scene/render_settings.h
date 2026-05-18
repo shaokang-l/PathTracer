@@ -29,6 +29,8 @@ struct RenderSettings {
   int restirInitialCandidates = 16;
   bool restirTemporal = true;
   int restirMaxHistory = 20;
+  int seed = 0;
+  bool progressiveAccumulation = true;
   Vec3f background = Vec3f(0.f);
 
   bool hasCameraOverride = false;
@@ -175,6 +177,9 @@ inline RenderSettings parseRenderSettings(int argc, char **argv, const RenderSet
   settings.restirMaxHistory =
     parseIntArg(argc, argv, "--restir-max-history", settings.restirMaxHistory);
   settings.restirMaxHistory = std::max(1, settings.restirMaxHistory);
+  settings.seed = parseIntArg(argc, argv, "--seed", settings.seed);
+  settings.progressiveAccumulation =
+    !hasArg(argc, argv, "--no-accumulation");
 
   settings.hasCameraOverride =
     hasArg(argc, argv, "--camera-origin") || hasArg(argc, argv, "--camera-target");

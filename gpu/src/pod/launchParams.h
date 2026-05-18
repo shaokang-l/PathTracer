@@ -62,6 +62,8 @@ struct LaunchParams {
   int                  restirInitialCandidates;
   int                  restirTemporal; // bool as int; Stage B temporal reuse toggle
   int                  restirMaxHistory;
+  int                  seed;
+  int                  progressiveAccumulation;
 
   OptixTraversableHandle world;
 
