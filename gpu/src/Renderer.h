@@ -113,6 +113,7 @@ namespace pt {
     OWLBuffer        lightBuffer_    = nullptr;
     OWLBuffer        restirReservoirBuffers_[2] = { nullptr, nullptr };
     OWLBuffer        restirSurfaceBuffers_[2] = { nullptr, nullptr };
+    OWLBuffer        restirSelectionSourceBuffer_ = nullptr;
     Denoiser         denoiser_;
     bool             denoiserEnabled_ = true;
     int              denoiserMinAccumulatedSpp_ = 32;

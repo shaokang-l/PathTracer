@@ -52,6 +52,7 @@ struct LaunchParams {
   pt::RestirReservoir *prevRestirReservoirs;
   pt::RestirSurfaceData *restirSurfaceData;
   pt::RestirSurfaceData *prevRestirSurfaceData;
+  int                  *restirSelectionSources;
 
   int                  accumID;       // frames accumulated so far
   int                  samplesPerPixel;

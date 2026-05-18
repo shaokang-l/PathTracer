@@ -25,6 +25,7 @@ namespace {
     case pt::DebugViewKind::TemporalCandidateTarget: return "temporal-candidate-target";
     case pt::DebugViewKind::TemporalTargetRatio: return "temporal-target-ratio";
     case pt::DebugViewKind::TemporalAccepted: return "temporal-accepted";
+    case pt::DebugViewKind::TemporalSource: return "temporal-source";
     default: return "unknown";
     }
   }
@@ -46,6 +47,7 @@ namespace {
     case 't': view = pt::DebugViewKind::TemporalCandidateTarget; return true;
     case 'r': view = pt::DebugViewKind::TemporalTargetRatio; return true;
     case 'a': view = pt::DebugViewKind::TemporalAccepted; return true;
+    case 's': view = pt::DebugViewKind::TemporalSource; return true;
     default: return false;
     }
   }

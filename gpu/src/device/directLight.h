@@ -83,6 +83,7 @@ __device__ inline bool evaluateReservoirSampleAtCurrentHit(
   return true;
 }
 
+// Fetch the temporal candidate from the previous frame and check if it is valid.
 __device__ inline bool acceptTemporalReservoirCandidate(
   const LaunchParams &params,
   int pxIdx,
@@ -190,6 +191,7 @@ __device__ inline vec3f estimateDirectLightReservoir(
 {
   pt::RestirReservoir reservoir;
   pt::RestirDirectLightCandidate selectedCandidate;
+  int selectedSource = 0; // 0: none, 1: current, 2: temporal
 
   // No-reuse ReSTIR DI, local reservoir only:
   // 1. Generate N initial candidates from the current light sampler.
@@ -197,6 +199,7 @@ __device__ inline vec3f estimateDirectLightReservoir(
   // 3. Keep a copy of the candidate when updateReservoir() replaces y.
   //
   // This is where --restir-initial-candidates is consumed on the device.
+  // For each frame, generate N initial candidates and update the local reservoir.
   for (int i = 0; i < params.restirInitialCandidates; ++i) {
     pt::RestirDirectLightCandidate candidate;
     const bool validCandidate =
@@ -215,11 +218,36 @@ __device__ inline vec3f estimateDirectLightReservoir(
       pt::updateReservoir(reservoir, candidate.sample, rng());
     if (replaced) {
       selectedCandidate = candidate;
+      selectedSource = 1;
     }
   }
 
-  // TODO(ReSTIR): finalize the reservoir after all initial candidates.
+  // temporal merge reservoir
+  pt::RestirDirectLightCandidate temporalCandidate;
+  if (acceptTemporalReservoirCandidate(params, pxIdx, prd, bsdf, wo, temporalCandidate))
+  {
+    const pt::RestirReservoir prevReservoir = params.prevRestirReservoirs[pxIdx];
+    const uint32_t representedM =
+      min(prevReservoir.M, uint32_t(params.restirMaxHistory));
+    
+      const bool replaced = pt::updateReservoirWithRepresentedCandidate(
+        reservoir,
+        temporalCandidate.sample,
+        temporalCandidate.sample.target,
+        prevReservoir.W,
+        representedM,
+        rng());
+      if (replaced) {
+        selectedCandidate = temporalCandidate;
+        selectedSource = 2;
+      }
+  }
+
   pt::finalizeReservoir(reservoir);
+  if (params.restirSelectionSources) {
+    params.restirSelectionSources[pxIdx] =
+      (reservoir.W > 0.f && reservoir.y.target > 0.f) ? selectedSource : 0;
+  }
 
   // Stage A persistent state:
   // Store the no-reuse reservoir so debug views and later temporal reuse can
@@ -229,7 +257,7 @@ __device__ inline vec3f estimateDirectLightReservoir(
     params.restirReservoirs[pxIdx] = reservoir;
   }
 
-  // TODO(ReSTIR): trace visibility only for the selected reservoir sample.
+  // trace visibility only for the selected reservoir sample.
   if (reservoir.W > 0.f && reservoir.y.target > 0.f) {
     const vec3f lightP = fromPtVec(selectedCandidate.sample.position);
     const vec3f V = traceVisibility(params.world, prd.hitP, lightP);
@@ -239,7 +267,7 @@ __device__ inline vec3f estimateDirectLightReservoir(
   }
 
   return vec3f(0.f);
-}
+};
 
 __device__ inline void storeRestirSurfaceData(const LaunchParams &params,
                                              int pxIdx,
