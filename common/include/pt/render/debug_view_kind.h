@@ -14,6 +14,8 @@ enum class DebugViewKind : int {
   ReservoirTarget = 8,
   RestirLightId = 9,
   PrevRestirLightId = 10,
+  TemporalCandidateTarget = 11,
+  TemporalTargetRatio = 12,
 };
 
 } // namespace pt

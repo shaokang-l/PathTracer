@@ -39,7 +39,9 @@ __device__ inline bool isRestirDebugView(pt::DebugViewKind debugView)
          debugView == pt::DebugViewKind::ReservoirM ||
          debugView == pt::DebugViewKind::ReservoirTarget ||
          debugView == pt::DebugViewKind::RestirLightId ||
-         debugView == pt::DebugViewKind::PrevRestirLightId;
+         debugView == pt::DebugViewKind::PrevRestirLightId ||
+         debugView == pt::DebugViewKind::TemporalCandidateTarget ||
+         debugView == pt::DebugViewKind::TemporalTargetRatio;
 }
 
 __device__ inline float compressDebugScalar(float v)
@@ -60,6 +62,12 @@ __device__ inline vec3f shadeRestirDebugView(const LaunchParams &params,
       return vec3f(0.f);
     }
     return hashColor(prevReservoir.y.lightId);
+  }
+
+  // These views are handled in raygen after reconstructing the current BSDF.
+  if (debugView == pt::DebugViewKind::TemporalCandidateTarget ||
+      debugView == pt::DebugViewKind::TemporalTargetRatio) {
+    return vec3f(0.f);
   }
 
   const pt::RestirReservoir reservoir = params.restirReservoirs[pxIdx];

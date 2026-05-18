@@ -129,6 +129,12 @@ inline RenderSettings parseRenderSettings(int argc, char **argv, const RenderSet
     settings.debugView = DebugViewKind::RestirLightId;
   } else if (debugView == "prev-restir-light-id" || debugView == "prev_restir_light_id") {
     settings.debugView = DebugViewKind::PrevRestirLightId;
+  } else if (debugView == "temporal-candidate-target" ||
+             debugView == "temporal_candidate_target") {
+    settings.debugView = DebugViewKind::TemporalCandidateTarget;
+  } else if (debugView == "temporal-target-ratio" ||
+             debugView == "temporal_target_ratio") {
+    settings.debugView = DebugViewKind::TemporalTargetRatio;
   } else {
     settings.debugView = DebugViewKind::Beauty;
   }

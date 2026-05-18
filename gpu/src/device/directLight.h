@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "pt/math/vec.h"
 #include "shading/bsdf.h"
 #include "device/prd.h"
 #include "device/visibility.h"
@@ -26,6 +27,46 @@ __device__ inline bool generateDirectLightCandidate(
   float uLight,
   vec2f uSurface,
   pt::RestirDirectLightCandidate &out);
+
+// Re-evaluate a previous-frame reservoir sample at the current hit point.
+__device__ inline bool evaluateReservoirSampleAtCurrentHit(
+  const PRD &prd,
+  const BSDF &bsdf,
+  const vec3f &wo,
+  const pt::RestirLightSample &sample,
+  pt::RestirDirectLightCandidate &out)
+{
+  out = pt::RestirDirectLightCandidate();
+
+  const vec3f lightP = fromPtVec(sample.position);
+  const vec3f lightN = fromPtVec(sample.normal);
+  const vec3f lightLe = fromPtVec(sample.emission);
+
+  const vec3f toLight = lightP - prd.hitP;
+  const float dist2 = dot(toLight, toLight);
+  if (dist2 <= 1e-7f || sample.sourcePdf <= 0.f)
+    return false;
+
+  const vec3f wi = normalize(toLight);
+
+  const float NoI = fmaxf(dot(prd.N, wi), 0.f);
+  const float NoL = fmaxf(dot(lightN, -wi), 0.f);
+  if (NoI <= 0.f || NoL <= 0.f)
+    return false;
+
+  const vec3f f = bsdf.f(wo, wi);
+  const float G = NoI * NoL / dist2;
+  const vec3f unshadowedContribution = lightLe * f * G;
+  const float target = pt::restirTargetFromRgb(toPtVec(unshadowedContribution));
+  if (target <= 0.f)
+    return false;
+
+  out.sample = sample;
+  out.sample.target = target;
+  out.wi = toPtVec(wi);
+  out.unshadowedContribution = toPtVec(unshadowedContribution);
+  return true;
+}
 
 __device__ inline vec3f estimateDirectLightNee(
   const LaunchParams &params,

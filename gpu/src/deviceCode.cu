@@ -142,6 +142,29 @@ OPTIX_RAYGEN_PROGRAM(rayGen)()
         // beauty launch having populated the reservoir buffer.
         if (bsdf.hasNonDelta()) {
           estimateDirectLightReservoir(params, pxIdx, prd, bsdf, wo, rng);
+
+          if ((debugView == pt::DebugViewKind::TemporalCandidateTarget ||
+               debugView == pt::DebugViewKind::TemporalTargetRatio) &&
+              params.prevRestirReservoirs) {
+            const pt::RestirReservoir prevReservoir = params.prevRestirReservoirs[pxIdx];
+            pt::RestirDirectLightCandidate temporalCandidate;
+            if (prevReservoir.M > 0 &&
+                prevReservoir.W > 0.f &&
+                prevReservoir.y.target > 0.f &&
+                evaluateReservoirSampleAtCurrentHit(prd,
+                                                    bsdf,
+                                                    wo,
+                                                    prevReservoir.y,
+                                                    temporalCandidate)) {
+              float v = compressDebugScalar(temporalCandidate.sample.target);
+              if (debugView == pt::DebugViewKind::TemporalTargetRatio) {
+                const float ratio = temporalCandidate.sample.target / prevReservoir.y.target;
+                v = compressDebugScalar(ratio);
+              }
+              L = L + vec3f(v);
+              continue;
+            }
+          }
         }
       }
 
